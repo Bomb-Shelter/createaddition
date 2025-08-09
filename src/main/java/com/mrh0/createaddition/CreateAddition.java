@@ -1,17 +1,31 @@
 package com.mrh0.createaddition;
 
 import com.mrh0.createaddition.config.CommonConfig;
+import com.mrh0.createaddition.event.GameEvents;
 import com.mrh0.createaddition.index.*;
 import com.mrh0.createaddition.index.CASounds;
 import com.mrh0.createaddition.network.*;
+import com.mrh0.createaddition.network.fabric.DirectionalPayloadHandler;
+import com.mrh0.createaddition.network.fabric.PayloadRegistrar;
 import com.mrh0.createaddition.ponder.CAPonderPlugin;
 import com.mrh0.createaddition.trains.schedule.CASchedule;
 import com.simibubi.create.content.processing.burner.BlazeBurnerBlock;
 import com.simibubi.create.foundation.item.ItemDescription;
 import com.simibubi.create.foundation.item.KineticStats;
+import io.github.fabricators_of_create.porting_lib.config.ConfigRegistry;
+import io.github.fabricators_of_create.porting_lib.config.ModConfig;
+import io.github.fabricators_of_create.porting_lib.config.ModConfigSpec;
+import io.github.fabricators_of_create.porting_lib.registry.DeferredHolder;
+import io.github.fabricators_of_create.porting_lib.registry.DeferredRegister;
 import net.createmod.catnip.lang.FontHelper;
 import net.createmod.catnip.platform.CatnipServices;
 import net.createmod.ponder.foundation.PonderIndex;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.commands.CommandSourceStack;
@@ -22,28 +36,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.level.ItemLike;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.fml.event.config.ModConfigEvent;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
-import net.neoforged.fml.loading.FMLPaths;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
-import net.neoforged.neoforge.network.registration.HandlerThread;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.RegisterEvent;
+import net.neoforged.fml.config.ModConfigs;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -56,8 +49,7 @@ import com.simibubi.create.api.boiler.BoilerHeater;
 
 import static net.minecraft.network.chat.Component.translatable;
 
-@Mod(CreateAddition.MODID)
-public class CreateAddition {
+public class CreateAddition implements ModInitializer {
     public static final Logger LOGGER = LogManager.getLogger();
 
     public static final String MODID = "createaddition";
@@ -86,8 +78,8 @@ public class CreateAddition {
 
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
 
-    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN_TAB = CREATIVE_MODE_TABS.register(MODID, () -> CreativeModeTab.builder()
-            .withTabsBefore(CreativeModeTabs.SPAWN_EGGS)
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN_TAB = CREATIVE_MODE_TABS.register(MODID, () -> FabricItemGroup.builder()
+            //.withTabsBefore(CreativeModeTabs.SPAWN_EGGS)
             .icon(() -> CABlocks.ELECTRIC_MOTOR.get().asItem().getDefaultInstance())
             .title(Component.translatable("itemGroup.createaddition.main"))
             .displayItems((itemDisplayParameters, output) -> REGISTRATE.getAll(Registries.ITEM).forEach((item -> {
@@ -98,60 +90,63 @@ public class CreateAddition {
             })))
             .build());
 
-    public CreateAddition(IEventBus eventBus, ModContainer container) {
-        eventBus.addListener(this::setup);
-        eventBus.addListener(this::doClientStuff);
-        eventBus.addListener(this::postInit);
-        eventBus.addListener(this::onRegister);
-        eventBus.addListener(RegisterCapabilitiesEvent.class, CACapabilities::register);
-        eventBus.addListener(RegisterPayloadHandlersEvent.class, CreateAddition::registerPackets);
+    public void onInitialize() {
+        this.setup();
+        this.onRegister();
+        registerPackets();
+        onRegisterCommandEvent();
         //FMLJavaModLoadingContext.get().getModEventBus().addGenericListener(RecipeSerializer.class, CARecipes::register);
 
         //IEventBus eventBus = FMLJavaModLoadingContext.get().getModEventBus();
         //MinecraftForge.EVENT_BUS.register(this);
-        NeoForge.EVENT_BUS.register(this);
 
-
-        container.registerConfig(ModConfig.Type.COMMON, CommonConfig.COMMON_CONFIG);
+        ConfigRegistry.registerConfig(MODID, ModConfig.Type.COMMON, CommonConfig.COMMON_CONFIG);
         //
 
-        IE_ACTIVE = ModList.get().isLoaded("immersiveengineering");
-        CC_ACTIVE = ModList.get().isLoaded("computercraft");
-        AE2_ACTIVE = ModList.get().isLoaded("ae2");
+        IE_ACTIVE = FabricLoader.getInstance().isModLoaded("immersiveengineering");
+        CC_ACTIVE = FabricLoader.getInstance().isModLoaded("computercraft");
+        AE2_ACTIVE = FabricLoader.getInstance().isModLoaded("ae2");
 
-        REGISTRATE.registerEventListeners(eventBus);
         CABlocks.register();
         CABlockEntities.register();
         CAItems.register();
-        CREATIVE_MODE_TABS.register(eventBus);
+        CREATIVE_MODE_TABS.register();
         CAFluids.register();
-        CAEffects.register(eventBus);
-        CARecipes.register(eventBus);
-        CASounds.register(eventBus);
+        CAEffects.register();
+        CARecipes.register();
+        CASounds.register();
         CASchedule.register();
         CADamageTypes.register();
         CADisplaySources.register();
+
+        REGISTRATE.registerEventListeners();
+        CACapabilities.register();
         CatnipServices.PLATFORM.executeOnClientOnly(() -> CAPartials::init);
+        CatnipServices.PLATFORM.executeOnClientOnly(() -> this::doClientStuff);
+
+        GameEvents.init();
+
+        this.postInit();
     }
 
-    private void setup(final FMLCommonSetupEvent event) {
+    private void setup() {
     	// BlockStressValues.CAPACITIES.registerProvider(MODID, AllConfigs.server().kinetics.stressValues);
     }
 
-    private void doClientStuff(final FMLClientSetupEvent event) {
+    private void doClientStuff() {
     	// event.enqueueWork(CAPonder::register);
-        event.enqueueWork(CAItemProperties::register);
+        CAItemProperties.register();
 
         PonderIndex.addPlugin(new CAPonderPlugin());
 
         RenderType cutout = RenderType.cutoutMipped();
 
-        ItemBlockRenderTypes.setRenderLayer(CABlocks.TESLA_COIL.get(), cutout);
-        ItemBlockRenderTypes.setRenderLayer(CABlocks.BARBED_WIRE.get(), cutout);
-        ItemBlockRenderTypes.setRenderLayer(CABlocks.SMALL_LIGHT_CONNECTOR.get(), cutout);
+        BlockRenderLayerMap.INSTANCE.putBlock(CABlocks.TESLA_COIL.get(), cutout);
+        BlockRenderLayerMap.INSTANCE.putBlock(CABlocks.BARBED_WIRE.get(), cutout);
+        BlockRenderLayerMap.INSTANCE.putBlock(CABlocks.SMALL_LIGHT_CONNECTOR.get(), cutout);
     }
 
-    public void postInit(FMLLoadCompleteEvent evt) {
+    public void postInit() {
         //Network.registerMessage(0, ObservePacketLegacy.class, ObservePacketLegacy::encode, ObservePacketLegacy::decode, ObservePacketLegacy::handle);
         //Network.registerMessage(1, EnergyNetworkPacket.class, EnergyNetworkPacket::encode, EnergyNetworkPacket::decode, EnergyNetworkPacket::handle);
 
@@ -166,20 +161,20 @@ public class CreateAddition {
         LOGGER.info("Create Crafts & Additions Initialized!");
     }
 
-    public void onRegister(final RegisterEvent event) {
+    public void onRegister() {
         CAArmInteractions.register();
     }
 
-    @SubscribeEvent
-    public void onRegisterCommandEvent(RegisterCommandsEvent event) {
-    	CommandDispatcher<CommandSourceStack> dispather = event.getDispatcher();
-    	CCApiCommand.register(dispather);
+    public void onRegisterCommandEvent() {
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            CCApiCommand.register(dispatcher);
+        });
     }
 
     private static final String PROTOCOL = "1";
-    public static void registerPackets(final RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar(PROTOCOL);
-        registrar = registrar.executesOn(HandlerThread.MAIN);
+    public static void registerPackets() {
+        PayloadRegistrar registrar = new PayloadRegistrar();
+
         registrar.playBidirectional(
                 ObservePacketPayload.TYPE,
                 ObservePacketPayload.STREAM_CODEC,

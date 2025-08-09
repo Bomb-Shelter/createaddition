@@ -1,0 +1,12 @@
+{
+  "values": [
+    {
+      "id": "createaddition:biomass_pellet_block",
+      "required": false
+    },
+    {
+      "id": "createaddition:electrum_block",
+      "required": false
+    }
+  ]
+}

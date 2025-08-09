@@ -1,0 +1,20 @@
+{
+  "values": [
+    {
+      "id": "createaddition:copper_spool",
+      "required": false
+    },
+    {
+      "id": "createaddition:gold_spool",
+      "required": false
+    },
+    {
+      "id": "createaddition:electrum_spool",
+      "required": false
+    },
+    {
+      "id": "createaddition:festive_spool",
+      "required": false
+    }
+  ]
+}

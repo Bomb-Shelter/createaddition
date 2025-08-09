@@ -6,20 +6,27 @@ import com.mrh0.createaddition.item.WireSpool;
 import com.mrh0.createaddition.sound.CASoundScapes;
 import com.mrh0.createaddition.util.ClientMinecraftWrapper;
 import com.mrh0.createaddition.util.Util;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+import net.minecraft.server.packs.PackType;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 
-@EventBusSubscriber(modid = CreateAddition.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
-public class ClientEventHandler {
+public class ClientEventHandler implements ClientModInitializer {
 
     public static boolean clientRenderHeldWire = false;
 
-    @SubscribeEvent
-    public static void playerRendererEvent(ClientTickEvent.Post evt) {
+    @Override
+    public void onInitializeClient() {
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            playerRendererEvent();
+            tickSoundscapes();
+        });
+
+        ModBusEvents.registerReloadListener();
+    }
+
+    public static void playerRendererEvent() {
         if(ClientMinecraftWrapper.getPlayer() == null) return;
         ItemStack stack = ClientMinecraftWrapper.getPlayer().getInventory().getSelected();
         if(stack.isEmpty()) return;
@@ -27,16 +34,13 @@ public class ClientEventHandler {
         clientRenderHeldWire = Util.getWireNodeOfSpools(stack) != null;
     }
 
-    @SubscribeEvent
-    public static void tickSoundscapes(ClientTickEvent.Post event) {
+    public static void tickSoundscapes() {
         CASoundScapes.tick();
     }
 
-    @EventBusSubscriber(value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
     public static class ModBusEvents {
-        @SubscribeEvent
-        public static void registerReloadListener(RegisterClientReloadListenersEvent event) {
-            event.registerReloadListener(new ResourceReloadListener());
+        public static void registerReloadListener() {
+            ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(new ResourceReloadListener());
         }
     }
 }

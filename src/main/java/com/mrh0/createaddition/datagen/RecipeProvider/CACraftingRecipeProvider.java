@@ -6,7 +6,11 @@ import com.mrh0.createaddition.index.CABlocks;
 import com.mrh0.createaddition.index.CAItems;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllItems;
+import io.github.fabricators_of_create.porting_lib.resources.conditions.ModLoadedCondition;
+import io.github.fabricators_of_create.porting_lib.tags.Tags;
+import net.fabricmc.fabric.api.tag.convention.v2.ConventionalItemTags;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.recipes.*;
 import net.minecraft.resources.ResourceLocation;
@@ -16,10 +20,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.ItemLike;
-import net.neoforged.neoforge.common.Tags;
-import net.neoforged.neoforge.common.conditions.ModLoadedCondition;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.util.concurrent.CompletableFuture;
 
 import static net.minecraft.data.recipes.RecipeBuilder.getDefaultRecipeId;
@@ -64,7 +66,7 @@ public class CACraftingRecipeProvider extends RecipeProvider {
     }
 
     @Override
-    protected void buildRecipes(RecipeOutput recipeOutput) {
+    public void buildRecipes(RecipeOutput recipeOutput) {
         SaveUtility utility = new SaveUtility(recipeOutput);
         utility.saveToCraftingFolder(
                 ShapedRecipeBuilder.shaped(RecipeCategory.MISC, CABlocks.BARBED_WIRE.asItem(), 2)
@@ -132,7 +134,7 @@ public class CACraftingRecipeProvider extends RecipeProvider {
                 new ModLoadedCondition("computercraft")
         )).saveToCraftingFolder(
                 ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, CABlocks.DIGITAL_ADAPTER.asItem())
-                        .requires(ItemTags.create(ResourceLocation.fromNamespaceAndPath("computercraft","wired_modem")))
+                        .requires(TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath("computercraft","wired_modem")))
                         .requires(CATagRegister.Items.commonTags("plates/brass"))
                         .requires(Items.REDSTONE_TORCH)
                         .unlockedBy("has_redstone_torch", has(Items.REDSTONE_TORCH))
@@ -192,10 +194,10 @@ public class CACraftingRecipeProvider extends RecipeProvider {
                         .requires(CATagRegister.Items.LARGE_CONNECTOR_USABLE_RODS)
                         .requires(AllItems.ANDESITE_ALLOY.asItem())
                         .requires(AllItems.ANDESITE_ALLOY.asItem())
-                        .requires(Tags.Items.SLIME_BALLS)
+                        .requires(ConventionalItemTags.SLIME_BALLS)
                         .unlockedBy("has_rod", has(CATagRegister.Items.LARGE_CONNECTOR_USABLE_RODS))
                         .unlockedBy("has_andesite_alloy", has(AllItems.ANDESITE_ALLOY.asItem()))
-                        .unlockedBy("has_slime_balls", has(Tags.Items.SLIME_BALLS))
+                        .unlockedBy("has_slime_balls", has(ConventionalItemTags.SLIME_BALLS))
                         .unlockedBy("has_large_connector", has(CABlocks.LARGE_CONNECTOR.asItem()))
         );
 
@@ -262,11 +264,11 @@ public class CACraftingRecipeProvider extends RecipeProvider {
                 ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, CABlocks.SMALL_CONNECTOR.asItem(),3)
                         .requires(CATagRegister.Items.COPPER_RODS)
                         .requires(AllItems.ANDESITE_ALLOY.asItem())
-                        .requires(Tags.Items.SLIME_BALLS)
+                        .requires(ConventionalItemTags.SLIME_BALLS)
                         .unlockedBy("has_small_connector", has(CABlocks.SMALL_CONNECTOR.asItem()))
                         .unlockedBy("has_copper_rod", has(CATagRegister.Items.COPPER_RODS))
                         .unlockedBy("has_andesite_alloy", has(AllItems.ANDESITE_ALLOY.asItem()))
-                        .unlockedBy("has_slime_ball", has(Tags.Items.SLIME_BALLS))
+                        .unlockedBy("has_slime_ball", has(ConventionalItemTags.SLIME_BALLS))
         );
         utility.saveToCraftingFolder(
                 ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, CABlocks.SMALL_LIGHT_CONNECTOR.asItem())

@@ -7,15 +7,19 @@ import com.simibubi.create.content.equipment.sandPaper.SandPaperItem;
 import com.simibubi.create.content.equipment.sandPaper.SandPaperItemRenderer;
 import com.simibubi.create.foundation.item.render.SimpleCustomRenderer;
 
+import io.github.fabricators_of_create.porting_lib.item.DamageableItem;
+import net.createmod.catnip.platform.CatnipServices;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 
 
-public class DiamondGritSandpaper extends SandPaperItem {
+public class DiamondGritSandpaper extends SandPaperItem implements DamageableItem {
 	public DiamondGritSandpaper(Properties properties) {
 		super(properties);
+
+		CatnipServices.PLATFORM.executeOnClientOnly(() -> () -> {
+			ClientSetup.setup(this);
+		});
 	}
 	
 	@Override
@@ -23,10 +27,9 @@ public class DiamondGritSandpaper extends SandPaperItem {
 		return CommonConfig.DIAMOND_GRIT_SANDPAPER_USES.get();
 	}
 
-	// This needs to be redone OnlyIn is never recommended
-	@Override
-	@OnlyIn(Dist.CLIENT)
-	public void initializeClient(Consumer<IClientItemExtensions> consumer) {
-		consumer.accept(SimpleCustomRenderer.create(this, new SandPaperItemRenderer()));
+	private static class ClientSetup {
+		public static void setup(Item item) {
+			SimpleCustomRenderer.create(item, new SandPaperItemRenderer());
+		}
 	}
 }

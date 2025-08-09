@@ -3,18 +3,47 @@ package com.mrh0.createaddition.datagen.TagProvider;
 import com.mrh0.createaddition.CreateAddition;
 import com.mrh0.createaddition.index.CABlocks;
 import com.simibubi.create.AllTags;
+import com.simibubi.create.foundation.mixin.accessor.fabric.TagAppenderAccessor;
+import io.github.fabricators_of_create.porting_lib.data.ExistingFileHelper;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagProvider;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.PackOutput;
 import net.minecraft.tags.BlockTags;
-import net.neoforged.neoforge.common.data.BlockTagsProvider;
-import net.neoforged.neoforge.common.data.ExistingFileHelper;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
 
-public class CABlockTagProvider extends BlockTagsProvider {
-    public CABlockTagProvider(PackOutput output, CompletableFuture<HolderLookup.Provider> lookupProvider, @Nullable ExistingFileHelper existingFileHelper) {
-        super(output, lookupProvider, CreateAddition.MODID, existingFileHelper);
+public class CABlockTagProvider extends FabricTagProvider.BlockTagProvider {
+    public CABlockTagProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, lookupProvider);
+    }
+
+    @Override
+    protected WrappedTagAppender tag(TagKey<Block> tag) {
+        return new WrappedTagAppender(super.tag(tag));
+    }
+
+    protected static class WrappedTagAppender extends TagAppender<Block> {
+        private final TagAppender<Block> wrapped;
+
+        protected WrappedTagAppender(TagAppender<Block> original) {
+            super(((TagAppenderAccessor) original).getBuilder());
+            this.wrapped = original;
+        }
+
+        public WrappedTagAppender add(Block... blocks) {
+            for (Block block : blocks) {
+                this.wrapped.addOptional(BuiltInRegistries.BLOCK.getKey(block));
+            }
+
+            return this;
+        }
     }
 
     @Override

@@ -15,7 +15,15 @@ import com.simibubi.create.content.kinetics.belt.behaviour.BeltProcessingBehavio
 import com.simibubi.create.content.kinetics.belt.behaviour.TransportedItemStackHandlerBehaviour;
 import com.simibubi.create.content.kinetics.belt.transport.TransportedItemStack;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
+import com.simibubi.create.infrastructure.fabric.transfer.CreateTransferUtil;
+import io.github.fabricators_of_create.porting_lib.transfer.TransferUtil;
+import io.github.fabricators_of_create.porting_lib.transfer.item.ItemStackHandler;
+import io.github.fabricators_of_create.porting_lib.transfer.item.RecipeWrapper;
 import net.createmod.catnip.platform.CatnipServices;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -32,13 +40,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.energy.IEnergyStorage;
-import net.neoforged.neoforge.items.ItemStackHandler;
-import net.neoforged.neoforge.items.wrapper.RecipeWrapper;
+import team.reborn.energy.api.EnergyStorage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,7 +51,7 @@ public class TeslaCoilBlockEntity extends AbstractElectricBlockEntity implements
 	private Optional<RecipeHolder<ChargingRecipe>> recipeCache = Optional.empty();
 
 	private final ItemStackHandler inputInv;
-	private int chargeAccumulator;
+	private long chargeAccumulator;
 	protected int poweredTimer = 0;
 
 	public TeslaCoilBlockEntity(BlockEntityType<?> tileEntityTypeIn, BlockPos pos, BlockState state) {
@@ -57,11 +59,10 @@ public class TeslaCoilBlockEntity extends AbstractElectricBlockEntity implements
 		inputInv = new ItemStackHandler(1);
 	}
 
-	public static void registerCapabilities(RegisterCapabilitiesEvent event) {
-		event.registerBlockEntity(
-				Capabilities.EnergyStorage.BLOCK,
-				CABlockEntities.TESLA_COIL.get(),
-				(be, context) -> be.localEnergy
+	public static void registerCapabilities() {
+		EnergyStorage.SIDED.registerForBlockEntity(
+			(be, context) -> be.localEnergy,
+			CABlockEntities.TESLA_COIL.get()
 		);
 	}
 
@@ -105,9 +106,9 @@ public class TeslaCoilBlockEntity extends AbstractElectricBlockEntity implements
 		return CommonConfig.TESLA_COIL_CHARGE_RATE.get();
 	}
 
-	protected float getItemCharge(IEnergyStorage energy) {
+	protected float getItemCharge(EnergyStorage energy) {
 		if (energy == null) return 0f;
-		return (float) energy.getEnergyStored() / (float) energy.getMaxEnergyStored();
+		return (float) energy.getAmount() / (float) energy.getCapacity();
 	}
 
 	protected BeltProcessingBehaviour.ProcessingResult onCharge(TransportedItemStack transported, TransportedItemStackHandlerBehaviour handler) {
@@ -164,10 +165,10 @@ public class TeslaCoilBlockEntity extends AbstractElectricBlockEntity implements
 			return;
 		}
 		int signal = level.getBestNeighborSignal(getBlockPos());
-		if(signal > 0 && localEnergy.getEnergyStored() >= CommonConfig.TESLA_COIL_HURT_ENERGY_REQUIRED.get()) poweredTimer = 10;
+		if(signal > 0 && localEnergy.getAmount() >= CommonConfig.TESLA_COIL_HURT_ENERGY_REQUIRED.get()) poweredTimer = 10;
 
 		dmgTick++;
-		if((dmgTick%= CommonConfig.TESLA_COIL_HURT_FIRE_COOLDOWN.get()) == 0 && localEnergy.getEnergyStored() >= CommonConfig.TESLA_COIL_HURT_ENERGY_REQUIRED.get() && signal > 0) doDmg();
+		if((dmgTick%= CommonConfig.TESLA_COIL_HURT_FIRE_COOLDOWN.get()) == 0 && localEnergy.getAmount() >= CommonConfig.TESLA_COIL_HURT_ENERGY_REQUIRED.get() && signal > 0) doDmg();
 
 		if(poweredTimer > 0) {
 			if (zapTimer == 0) {
@@ -182,7 +183,7 @@ public class TeslaCoilBlockEntity extends AbstractElectricBlockEntity implements
 		else if(isPoweredState()) CABlocks.TESLA_COIL.get().setPowered(level, getBlockPos(), false);
 	}
 
-	@OnlyIn(Dist.CLIENT)
+	@Environment(EnvType.CLIENT)
 	public void tickAudio() {
 		if (!isPoweredState()) return;
 		if (CommonConfig.AUDIO_ENABLED.get()) CASoundScapes.play(CASoundScapes.AmbienceGroup.TESLA, worldPosition, 1f);
@@ -208,15 +209,20 @@ public class TeslaCoilBlockEntity extends AbstractElectricBlockEntity implements
 	}
 
 	protected boolean chargeStack(ItemStack stack, TransportedItemStack transported, TransportedItemStackHandlerBehaviour handler) {
-		IEnergyStorage es = stack.getCapability(Capabilities.EnergyStorage.ITEM);
+		EnergyStorage es = EnergyStorage.ITEM.find(stack, ContainerItemContext.withConstant(stack));
 		if (es == null) return false;
-		if(es.receiveEnergy(1, true) != 1) return false;
-		if(localEnergy.getEnergyStored() < stack.getCount()) return false;
-		localEnergy.internalConsumeEnergy(es.receiveEnergy(Math.min(getConsumption(), localEnergy.getEnergyStored()), false));
+		try (Transaction transaction = TransferUtil.getTransaction()) {
+			if(es.insert(1, transaction) != 1) return false;
+		}
+		if(localEnergy.getAmount() < stack.getCount()) return false;
+		try (Transaction transaction = TransferUtil.getTransaction()) {
+			localEnergy.internalConsumeEnergy(es.insert(Math.min(getConsumption(), localEnergy.getAmount()), transaction));
+			transaction.commit();
+		}
 		return true;
 	}
 
-	private int energyRemoved = 0;
+	private long energyRemoved = 0;
 	private boolean chargeRecipe(ItemStack stack, TransportedItemStack transported, TransportedItemStackHandlerBehaviour handler) {
 		if(this.getLevel() == null) return false;
 		if(!inputInv.getStackInSlot(0).is(stack.getItem())) {
@@ -272,10 +278,10 @@ public class TeslaCoilBlockEntity extends AbstractElectricBlockEntity implements
 
 	@Override
 	public void onObserved(ServerPlayer player, ObservePacketPayload pkt) {
-		int timeRemaining = 0;
+		long timeRemaining = 0;
 		if(recipeCache.isPresent()) {
 			ChargingRecipe recipe = recipeCache.get().value();
-			int chargeRate = Util.min(CommonConfig.TESLA_COIL_RECIPE_CHARGE_RATE.get(), recipe.getEnergy() - chargeAccumulator, recipe.getMaxChargeRate());
+			long chargeRate = Util.min(CommonConfig.TESLA_COIL_RECIPE_CHARGE_RATE.get(), recipe.getEnergy() - chargeAccumulator, recipe.getMaxChargeRate());
 			if (chargeRate == 0) return;
 			timeRemaining = (recipe.getEnergy() - chargeAccumulator) / chargeRate;
 		}

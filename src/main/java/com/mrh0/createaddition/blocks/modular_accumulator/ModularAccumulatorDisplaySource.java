@@ -7,10 +7,10 @@ import com.simibubi.create.content.redstone.displayLink.DisplayLinkContext;
 import com.simibubi.create.content.redstone.displayLink.source.PercentOrProgressBarDisplaySource;
 import com.simibubi.create.foundation.gui.ModularGuiLineBuilder;
 
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.Nullable;
 
 public class ModularAccumulatorDisplaySource extends PercentOrProgressBarDisplaySource {
@@ -35,8 +35,8 @@ public class ModularAccumulatorDisplaySource extends PercentOrProgressBarDisplay
 		be = be.getControllerBE();
 		if(be == null) return null;
 
-		float capacity = be.energyCapability.getMaxEnergyStored();
-		float stored = be.energyCapability.getEnergyStored();
+		float capacity = be.energyCapability.getCapacity();
+		float stored = be.energyCapability.getAmount();
 
 		if (capacity == 0) return 0f;
 
@@ -60,7 +60,7 @@ public class ModularAccumulatorDisplaySource extends PercentOrProgressBarDisplay
 	}
 
 	@Override
-	@OnlyIn(Dist.CLIENT)
+	@Environment(EnvType.CLIENT)
 	public void initConfigurationWidgets(DisplayLinkContext context, ModularGuiLineBuilder builder,
 		boolean isFirstLine) {
 		super.initConfigurationWidgets(context, builder, isFirstLine);

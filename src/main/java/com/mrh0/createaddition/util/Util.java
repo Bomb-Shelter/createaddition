@@ -15,7 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
-import net.neoforged.neoforge.energy.IEnergyStorage;
+import team.reborn.energy.api.EnergyStorage;
 
 public class Util {
 	public static int max(int...v) {
@@ -29,6 +29,14 @@ public class Util {
 	public static int min(int...v) {
 		int m = Integer.MAX_VALUE;
 		for(int i : v)
+			if(i < m)
+				m = i;
+		return m;
+	}
+
+	public static long min(long...v) {
+		long m = Long.MAX_VALUE;
+		for(long i : v)
 			if(i < m)
 				m = i;
 		return m;
@@ -77,17 +85,31 @@ public class Util {
 		return n + "";
 	}
 
-	public static MutableComponent getTextComponent(IEnergyStorage ies, String nan, String unit) {
-		if(ies == null)
-			return Component.literal(nan);
-		return getTextComponent(ies.getEnergyStored(), unit).withStyle(ChatFormatting.AQUA).append(Component.literal(" / ").withStyle(ChatFormatting.GRAY)).append(getTextComponent(ies.getMaxEnergyStored(), unit));
+	public static String format(long n) {
+		if(n > 1000_000_000)
+			return Math.round((double)n/100_000_000d)/10d + "G";
+		if(n >= 1000_000)
+			return Math.round((double)n/100_000d)/10d + "M";
+		if(n >= 1000)
+			return Math.round((double)n/100d)/10d + "K";
+		return n + "";
 	}
 
-	public static MutableComponent getTextComponent(IEnergyStorage ies) {
+	public static MutableComponent getTextComponent(EnergyStorage ies, String nan, String unit) {
+		if(ies == null)
+			return Component.literal(nan);
+		return getTextComponent(ies.getAmount(), unit).withStyle(ChatFormatting.AQUA).append(Component.literal(" / ").withStyle(ChatFormatting.GRAY)).append(getTextComponent(ies.getCapacity(), unit));
+	}
+
+	public static MutableComponent getTextComponent(EnergyStorage ies) {
 		return getTextComponent(ies, "NaN", "⚡");
 	}
 
 	public static MutableComponent getTextComponent(int value, String unit) {
+		return Component.literal(format(value)+unit);
+	}
+
+	public static MutableComponent getTextComponent(long value, String unit) {
 		return Component.literal(format(value)+unit);
 	}
 
@@ -118,6 +140,12 @@ public class Util {
 	}
 
 	public static String formatTime(int ticks) {
+		if (ticks > 20*60) return (ticks/(20*60)) + "m";
+		if (ticks > 20) return (ticks/20) + "s";
+		return (ticks) + "t";
+	}
+
+	public static String formatTime(long ticks) {
 		if (ticks > 20*60) return (ticks/(20*60)) + "m";
 		if (ticks > 20) return (ticks/20) + "s";
 		return (ticks) + "t";

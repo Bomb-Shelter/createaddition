@@ -1,0 +1,20 @@
+{
+  "values": [
+    {
+      "id": "createaddition:gold_wire",
+      "required": false
+    },
+    {
+      "id": "createaddition:iron_wire",
+      "required": false
+    },
+    {
+      "id": "createaddition:electrum_wire",
+      "required": false
+    },
+    {
+      "id": "createaddition:copper_wire",
+      "required": false
+    }
+  ]
+}

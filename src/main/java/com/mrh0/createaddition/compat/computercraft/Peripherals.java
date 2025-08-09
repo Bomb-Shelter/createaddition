@@ -7,39 +7,33 @@ import com.mrh0.createaddition.blocks.redstone_relay.RedstoneRelayBlockEntity;
 
 import com.mrh0.createaddition.blocks.electric_motor.ElectricMotorBlockEntity;
 import com.mrh0.createaddition.index.CABlockEntities;
-import dan200.computercraft.api.peripheral.PeripheralCapability;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import dan200.computercraft.api.peripheral.PeripheralLookup;
 
 public class Peripherals {
-	public static void registerPeripheralCapabilities(RegisterCapabilitiesEvent event) {
-		event.registerBlockEntity(
-				PeripheralCapability.get(),
-				CABlockEntities.ELECTRIC_MOTOR.get(),
-				(be, dir) -> createElectricMotorPeripheral(be)
+	public static void registerPeripheralCapabilities() {
+		PeripheralLookup.get().registerForBlockEntity(
+			(be, dir) -> createElectricMotorPeripheral(be),
+			CABlockEntities.ELECTRIC_MOTOR.get()
 		);
 
-		event.registerBlockEntity(
-				PeripheralCapability.get(),
-				CABlockEntities.PORTABLE_ENERGY_INTERFACE.get(),
-				(be, dir) -> createPortableEnergyInterfacePeripheral(be)
+		PeripheralLookup.get().registerForBlockEntity(
+			(be, dir) -> createPortableEnergyInterfacePeripheral(be),
+			CABlockEntities.PORTABLE_ENERGY_INTERFACE.get()
 		);
 
-		event.registerBlockEntity(
-				PeripheralCapability.get(),
-				CABlockEntities.MODULAR_ACCUMULATOR.get(),
-				(be, dir) -> createModularAccumulatorPeripheral(be)
+		PeripheralLookup.get().registerForBlockEntity(
+			(be, dir) -> createModularAccumulatorPeripheral(be),
+			CABlockEntities.MODULAR_ACCUMULATOR.get()
 		);
 
-		event.registerBlockEntity(
-				PeripheralCapability.get(),
-				CABlockEntities.REDSTONE_RELAY.get(),
-				(be, dir) -> createRedstoneRelayPeripheral(be)
+		PeripheralLookup.get().registerForBlockEntity(
+			(be, dir) -> createRedstoneRelayPeripheral(be),
+			CABlockEntities.REDSTONE_RELAY.get()
 		);
 
-		event.registerBlockEntity(
-				PeripheralCapability.get(),
-				CABlockEntities.DIGITAL_ADAPTER.get(),
-				(be, dir) -> createDigitalAdapterPeripheral(be)
+		PeripheralLookup.get().registerForBlockEntity(
+			(be, dir) -> createDigitalAdapterPeripheral(be),
+			CABlockEntities.DIGITAL_ADAPTER.get()
 		);
 	}
 	

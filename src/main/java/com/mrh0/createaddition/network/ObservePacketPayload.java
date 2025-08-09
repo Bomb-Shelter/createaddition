@@ -1,12 +1,12 @@
 package com.mrh0.createaddition.network;
 
 import com.mrh0.createaddition.CreateAddition;
+import com.mrh0.createaddition.network.fabric.PacketDistributor;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 public record ObservePacketPayload(BlockPos pos, int node) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<ObservePacketPayload> TYPE = new CustomPacketPayload.Type<>(CreateAddition.asResource("observer_packet"));

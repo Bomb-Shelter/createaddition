@@ -6,25 +6,52 @@ import com.mrh0.createaddition.index.CAFluids;
 import com.mrh0.createaddition.index.CAItems;
 import com.simibubi.create.AllItems;
 import com.simibubi.create.AllTags;
+import com.simibubi.create.foundation.mixin.accessor.fabric.TagAppenderAccessor;
+import io.github.fabricators_of_create.porting_lib.tags.Tags;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagProvider;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.tags.ItemTagsProvider;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagBuilder;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.common.Tags;
-import net.neoforged.neoforge.common.data.ExistingFileHelper;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
 
-public class CAItemTagProvider extends ItemTagsProvider {
+public class CAItemTagProvider extends FabricTagProvider.ItemTagProvider {
 
 
-    public CAItemTagProvider(PackOutput output, CompletableFuture<HolderLookup.Provider> lookupProvider, CompletableFuture<TagLookup<Block>> blockTags, @Nullable ExistingFileHelper existingFileHelper) {
-        super(output, lookupProvider, blockTags, CreateAddition.MODID, existingFileHelper);
+    public CAItemTagProvider(FabricDataOutput output, CompletableFuture<HolderLookup.Provider> lookupProvider, FabricTagProvider.BlockTagProvider blockTags) {
+        super(output, lookupProvider, blockTags);
+    }
+
+    @Override
+    protected WrappedTagAppender tag(TagKey<Item> tag) {
+        return new WrappedTagAppender(super.tag(tag));
+    }
+
+    protected static class WrappedTagAppender extends TagAppender<Item> {
+        private final TagAppender<Item> wrapped;
+
+        protected WrappedTagAppender(TagAppender<Item> original) {
+            super(((TagAppenderAccessor) original).getBuilder());
+            this.wrapped = original;
+        }
+
+        public WrappedTagAppender add(ItemLike... items) {
+            for (ItemLike item : items) {
+                this.wrapped.addOptional(BuiltInRegistries.ITEM.getKey(item.asItem()));
+            }
+
+            return this;
+        }
     }
 
     @Override

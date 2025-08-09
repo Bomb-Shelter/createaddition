@@ -2,11 +2,11 @@ package com.mrh0.createaddition.recipe.conditions;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.github.fabricators_of_create.porting_lib.resources.conditions.ICondition;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.common.conditions.ICondition;
 
 public record HasFluidTagCondition(TagKey<Fluid> tag) implements ICondition {
 	public static final MapCodec<HasFluidTagCondition> CODEC = RecordCodecBuilder.mapCodec((builder) -> {

@@ -18,8 +18,8 @@ import mezz.jei.api.runtime.IIngredientManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
+import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,7 +29,7 @@ public class CreateAdditionJEI implements IModPlugin {
 	private static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(CreateAddition.MODID, "jei_plugin");
 
 	@Override
-	@Nonnull
+	@NotNull
 	public ResourceLocation getPluginUid() {
 		return ID;
 	}

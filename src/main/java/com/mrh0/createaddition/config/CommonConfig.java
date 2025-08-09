@@ -4,16 +4,10 @@ import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
 
 import com.mrh0.createaddition.CreateAddition;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModLoadingContext;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.fml.event.config.ModConfigEvent;
-import net.neoforged.fml.loading.FMLPaths;
-import net.neoforged.neoforge.common.ModConfigSpec;
-import net.neoforged.neoforge.common.NeoForge;
+import io.github.fabricators_of_create.porting_lib.config.ModConfigEvent;
+import io.github.fabricators_of_create.porting_lib.config.ModConfigSpec;
+import net.fabricmc.loader.api.FabricLoader;
 
-@EventBusSubscriber(modid = CreateAddition.MODID,bus = EventBusSubscriber.Bus.MOD)
 public class CommonConfig {
 	public static final String CATAGORY_GENERAL = "general";
 	public static final String CATAGORY_ELECTRIC_MOTOR = "electric_motor";
@@ -255,9 +249,12 @@ public class CommonConfig {
 		spec.correct(configData);
 	}
 
-	@SubscribeEvent
+	static {
+		ModConfigEvent.Loading.EVENT.register(CommonConfig::onLoad);
+	}
+
 	public static void onLoad(ModConfigEvent.Loading event) {
-		CommonConfig.loadConfig(CommonConfig.COMMON_CONFIG, FMLPaths.CONFIGDIR.get().resolve("createaddition-common.toml"));
+		CommonConfig.loadConfig(CommonConfig.COMMON_CONFIG, FabricLoader.getInstance().getConfigDir().resolve("createaddition-common.toml"));
 	}
 
 }

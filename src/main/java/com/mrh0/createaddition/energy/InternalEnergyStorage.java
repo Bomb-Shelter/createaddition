@@ -1,32 +1,32 @@
 package com.mrh0.createaddition.energy;
 
+import io.github.fabricators_of_create.porting_lib.transfer.TransferUtil;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.energy.EnergyStorage;
-import net.neoforged.neoforge.energy.IEnergyStorage;
+import team.reborn.energy.api.EnergyStorage;
 
-public class InternalEnergyStorage extends EnergyStorage {
-	public InternalEnergyStorage(int capacity) {
+public class InternalEnergyStorage extends SimpleEnergyStorage {
+	public InternalEnergyStorage(long capacity) {
         super(capacity, capacity, capacity, 0);
     }
 
-    public InternalEnergyStorage(int capacity, int maxTransfer) {
+    public InternalEnergyStorage(long capacity, long maxTransfer) {
         super(capacity, maxTransfer, maxTransfer, 0);
     }
 
-    public InternalEnergyStorage(int capacity, int maxReceive, int maxExtract) {
+    public InternalEnergyStorage(long capacity, long maxReceive, long maxExtract) {
         super(capacity, maxReceive, maxExtract, 0);
     }
 
-    public InternalEnergyStorage(int capacity, int maxReceive, int maxExtract, int energy) {
+    public InternalEnergyStorage(long capacity, long maxReceive, long maxExtract, long energy) {
         super(capacity, maxReceive, maxExtract, energy);
     }
     
     public CompoundTag write(CompoundTag nbt) {
-    	nbt.putInt("energy", energy);
+    	nbt.putLong("energy", energy);
     	return nbt;
     }
     
@@ -35,58 +35,61 @@ public class InternalEnergyStorage extends EnergyStorage {
     }
     
     public CompoundTag write(CompoundTag nbt, String name) {
-    	nbt.putInt("energy_"+name, energy);
+    	nbt.putLong("energy_"+name, energy);
     	return nbt;
     }
     
     public void read(CompoundTag nbt, String name) {
-    	setEnergy(nbt.getInt("energy_"+name));
+    	setEnergy(nbt.getLong("energy_"+name));
     }
     
-    public int getSpace() {
-    	return Math.max(getMaxEnergyStored() - getEnergyStored(), 0);
+    public long getSpace() {
+    	return Math.max(getCapacity() - getAmount(), 0);
+    }
+
+    @Override
+    public boolean supportsExtraction() {
+		return maxExtract > 0;
     }
     
     @Override
-    public boolean canExtract() {
-    	return maxExtract > 0;
-    }
-    
-    @Override
-    public boolean canReceive() {
+    public boolean supportsInsertion() {
     	return maxReceive > 0;
     }
     
-    public int internalConsumeEnergy(int consume) {
-    	int oenergy = energy;
+    public long internalConsumeEnergy(long consume) {
+    	long oenergy = energy;
         energy = Math.max(0, energy - consume);
         return oenergy - energy;
     }
     
-    public int internalProduceEnergy(int produce) {
-    	int oenergy = energy;
+    public long internalProduceEnergy(long produce) {
+    	long oenergy = energy;
         energy = Math.min(capacity, energy + produce);
         return oenergy - energy;
     }
     
-    public void setEnergy(int energy) {
+    public void setEnergy(long energy) {
     	this.energy = energy;
     }
     
-    public void setCapacity(int capacity) {
+    public void setCapacity(long capacity) {
     	this.capacity = capacity;
     }
     
     @Deprecated
-    public void outputToSide(Level level, BlockPos pos, Direction side, int max) {
-		IEnergyStorage ies = level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, side.getOpposite());
+    public void outputToSide(Level level, BlockPos pos, Direction side, long max) {
+		EnergyStorage ies = EnergyStorage.SIDED.find(level, pos, side.getOpposite());
 		if(ies == null) return;
-		int ext = this.extractEnergy(max, false);
-		this.receiveEnergy(ext - ies.receiveEnergy(ext, false), false);
+        try (Transaction transaction = TransferUtil.getTransaction()) {
+            long ext = this.extract(max, transaction);
+            this.insert(ext - ies.insert(ext, transaction), transaction);
+            transaction.commit();
+        }
     }
     
     @Override
     public String toString() {
-    	return getEnergyStored() + "/" + getMaxEnergyStored() + " <-" + maxExtract + " ->" + maxReceive;
+    	return getAmount() + "/" + getCapacity() + " <-" + maxExtract + " ->" + maxReceive;
     }
 }

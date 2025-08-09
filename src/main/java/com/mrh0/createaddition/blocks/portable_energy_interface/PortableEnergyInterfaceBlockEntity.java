@@ -1,21 +1,23 @@
 package com.mrh0.createaddition.blocks.portable_energy_interface;
 
 import com.mrh0.createaddition.config.CommonConfig;
+import com.mrh0.createaddition.energy.SimpleEnergyStorage;
 import com.mrh0.createaddition.index.CABlockEntities;
 import com.simibubi.create.content.contraptions.Contraption;
 import com.simibubi.create.content.contraptions.actors.psi.PortableStorageInterfaceBlockEntity;
+import io.github.fabricators_of_create.porting_lib.transfer.callbacks.TransactionSuccessCallback;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
+import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
+import net.fabricmc.fabric.impl.lookup.block.ServerWorldCache;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.energy.EnergyStorage;
-import net.neoforged.neoforge.energy.IEnergyStorage;
+import team.reborn.energy.api.EnergyStorage;
 
 public class PortableEnergyInterfaceBlockEntity extends PortableStorageInterfaceBlockEntity {
 
-	protected IEnergyStorage capability;
+	protected EnergyStorage capability;
 	//protected LazyOptional<PortableEnergyInterfacePeripheral> peripheral;
 
 	public PortableEnergyInterfaceBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
@@ -27,16 +29,15 @@ public class PortableEnergyInterfaceBlockEntity extends PortableStorageInterface
 		//	this.peripheral = LazyOptional.of(() -> Peripherals.createPortableEnergyInterfacePeripheral(this));
 	}
 
-	public static void registerCapabilities(RegisterCapabilitiesEvent event) {
-		event.registerBlockEntity(
-				Capabilities.EnergyStorage.BLOCK,
-				CABlockEntities.PORTABLE_ENERGY_INTERFACE.get(),
-				(be, context) -> be.capability
+	public static void registerCapabilities() {
+		EnergyStorage.SIDED.registerForBlockEntity(
+			(be, context) -> be.capability,
+			CABlockEntities.PORTABLE_ENERGY_INTERFACE.get()
 		);
 	}
 
 	public void startTransferringTo(Contraption contraption, float distance) {
-		IEnergyStorage oldcap = this.capability;
+		EnergyStorage oldcap = this.capability;
 		invalidate();
 		this.capability =  new InterfaceEnergyHandler(PortableEnergyManager.get(contraption));
 		//oldcap.invalidate();
@@ -46,21 +47,22 @@ public class PortableEnergyInterfaceBlockEntity extends PortableStorageInterface
 	@Override
 	protected void invalidateCapability() {
 		if (level == null) return;
-		level.invalidateCapabilities(getBlockPos());
+		if (level instanceof ServerWorldCache worldCache)
+			worldCache.fabric_invalidateCache(getBlockPos());
 		// this.capability.invalidate();
 	}
 
 	@Override
 	protected void stopTransferring() {
-		IEnergyStorage oldcap = this.capability;
+		EnergyStorage oldcap = this.capability;
 		invalidate();
 		this.capability = this.createEmptyHandler();
 		//oldcap.invalidate();
 		super.stopTransferring();
 	}
 
-	private IEnergyStorage createEmptyHandler() {
-		return new InterfaceEnergyHandler(new EnergyStorage(0));
+	private EnergyStorage createEmptyHandler() {
+		return new InterfaceEnergyHandler(new SimpleEnergyStorage(0));
 	}
 
 	// Implement protected methods.
@@ -88,61 +90,63 @@ public class PortableEnergyInterfaceBlockEntity extends PortableStorageInterface
 
 	// CC
 
-	public int getEnergy() {
-		return this.capability.getEnergyStored();
+	public long getEnergy() {
+		return this.capability.getAmount();
 	}
 
-	public int getCapacity() {
-		return this.capability.getMaxEnergyStored();
+	public long getCapacity() {
+		return this.capability.getCapacity();
 	}
 
-	public class InterfaceEnergyHandler implements IEnergyStorage {
+	public class InterfaceEnergyHandler implements EnergyStorage {
 
-		private final IEnergyStorage wrapped;
+		private final EnergyStorage wrapped;
 
-		public InterfaceEnergyHandler(IEnergyStorage wrapped) {
+		public InterfaceEnergyHandler(EnergyStorage wrapped) {
 			this.wrapped = wrapped;
 		}
 
 		@Override
-		public int receiveEnergy(int maxReceive, boolean simulate) {
+		public long insert(long maxReceive, TransactionContext transaction) {
 			if (!PortableEnergyInterfaceBlockEntity.this.canTransfer()) return 0;
 			maxReceive = Math.min(maxReceive, CommonConfig.PEI_MAX_INPUT.get());
 			if (this.wrapped == null) return 0;
-			int received = this.wrapped.receiveEnergy(maxReceive, simulate);
-			if (received != 0 && !simulate) this.keepAlive();
+			long received = this.wrapped.insert(maxReceive, transaction);
+			if (received != 0)
+				TransactionSuccessCallback.onSuccess(transaction, this::keepAlive);
 			return received;
 		}
 
 		@Override
-		public int extractEnergy(int maxExtract, boolean simulate) {
+		public long extract(long maxExtract, TransactionContext transaction) {
 			if (!PortableEnergyInterfaceBlockEntity.this.canTransfer()) return 0;
 			maxExtract = Math.min(maxExtract, CommonConfig.PEI_MAX_OUTPUT.get());
 			if (this.wrapped == null) return 0;
-			int extracted = this.wrapped.extractEnergy(maxExtract, simulate);
-			if (extracted != 0 && !simulate) this.keepAlive();
+			long extracted = this.wrapped.extract(maxExtract, transaction);
+			if (extracted != 0)
+				TransactionSuccessCallback.onSuccess(transaction, this::keepAlive);
 			return extracted;
 		}
 
 		@Override
-		public int getEnergyStored() {
+		public long getAmount() {
 			if (this.wrapped == null) return 0;
-			return this.wrapped.getEnergyStored();
+			return this.wrapped.getAmount();
 		}
 
 		@Override
-		public int getMaxEnergyStored() {
+		public long getCapacity() {
 			if (this.wrapped == null) return 0;
-			return this.wrapped.getMaxEnergyStored();
+			return this.wrapped.getCapacity();
 		}
 
 		@Override
-		public boolean canExtract() {
+		public boolean supportsExtraction() {
 			return true;
 		}
 
 		@Override
-		public boolean canReceive() {
+		public boolean supportsInsertion() {
 			return true;
 		}
 

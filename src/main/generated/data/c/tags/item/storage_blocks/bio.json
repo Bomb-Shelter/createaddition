@@ -1,0 +1,8 @@
+{
+  "values": [
+    {
+      "id": "createaddition:biomass_pellet_block",
+      "required": false
+    }
+  ]
+}

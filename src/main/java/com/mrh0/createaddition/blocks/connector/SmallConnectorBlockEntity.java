@@ -9,8 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import team.reborn.energy.api.EnergyStorage;
 
 import java.util.List;
 
@@ -28,11 +27,10 @@ public class SmallConnectorBlockEntity extends AbstractConnectorBlockEntity {
         super(blockEntityTypeIn, pos, state);
     }
 
-    public static void registerCapabilities(RegisterCapabilitiesEvent event) {
-        event.registerBlockEntity(
-                Capabilities.EnergyStorage.BLOCK,
-                CABlockEntities.SMALL_CONNECTOR.get(),
-                (be, context) -> be.internal
+    public static void registerCapabilities() {
+        EnergyStorage.SIDED.registerForBlockEntity(
+            (be, context) -> be.internal,
+            CABlockEntities.SMALL_CONNECTOR.get()
         );
     }
 

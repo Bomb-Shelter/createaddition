@@ -1,0 +1,12 @@
+{
+  "type": "createaddition:liquid_burning",
+  "burn_time": 4800,
+  "ingredients": [
+    {
+      "type": "fluid_tag",
+      "amount": 1000,
+      "fluid_tag": "c:plantoil"
+    }
+  ],
+  "results": []
+}

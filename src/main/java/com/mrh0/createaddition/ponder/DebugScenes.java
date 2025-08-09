@@ -3,11 +3,12 @@ package com.mrh0.createaddition.ponder;
 import com.simibubi.create.AllFluids;
 import com.simibubi.create.content.fluids.tank.FluidTankBlockEntity;
 import com.simibubi.create.foundation.ponder.CreateSceneBuilder;
+import com.simibubi.create.infrastructure.fabric.transfer.CreateTransferUtil;
+import io.github.fabricators_of_create.porting_lib.fluids.FluidStack;
 import net.createmod.ponder.api.scene.SceneBuilder;
 import net.createmod.ponder.api.scene.SceneBuildingUtil;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
 import net.minecraft.core.Direction;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 
 public class DebugScenes {
     public static void controllerBEDebug(SceneBuilder builder, SceneBuildingUtil util){
@@ -17,13 +18,13 @@ public class DebugScenes {
         scene.world().showSection(util.select().everywhere(), Direction.DOWN);
 
         scene.world().modifyBlockEntity(util.grid().at(1, 1, 1), FluidTankBlockEntity.class,
-                be -> be.getControllerBE().getTankInventory().fill(new FluidStack(AllFluids.CHOCOLATE, 5000), IFluidHandler.FluidAction.EXECUTE));
+                be -> CreateTransferUtil.insertFluid(be.getControllerBE().getTankInventory(), new FluidStack(AllFluids.CHOCOLATE, 5000), false));
         scene.idle(20);
         scene.world().modifyBlockEntity(util.grid().at(2, 2, 2), FluidTankBlockEntity.class,
-                be -> be.getControllerBE().getTankInventory().fill(new FluidStack(AllFluids.CHOCOLATE, 5000), IFluidHandler.FluidAction.EXECUTE));
+                be -> CreateTransferUtil.insertFluid(be.getControllerBE().getTankInventory(), new FluidStack(AllFluids.CHOCOLATE, 5000), false));
         scene.idle(20);
         scene.world().modifyBlockEntity(util.grid().at(0, 3, 0), FluidTankBlockEntity.class,
-                be -> be.getControllerBE().getTankInventory().fill(new FluidStack(AllFluids.CHOCOLATE, 5000), IFluidHandler.FluidAction.EXECUTE));
+                be -> CreateTransferUtil.insertFluid(be.getControllerBE().getTankInventory(), new FluidStack(AllFluids.CHOCOLATE, 5000), false));
         scene.idle(20);
     }
 }

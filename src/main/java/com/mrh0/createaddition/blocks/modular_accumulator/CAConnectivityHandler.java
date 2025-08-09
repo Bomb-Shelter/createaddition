@@ -9,10 +9,9 @@ import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.simibubi.create.foundation.blockEntity.IMultiBlockEntityContainer;
 import net.createmod.catnip.data.Iterate;
+import net.fabricmc.fabric.impl.lookup.block.ServerWorldCache;
 import org.apache.commons.lang3.tuple.Pair;
 
 import com.mrh0.createaddition.energy.InternalEnergyStorage;
@@ -23,7 +22,7 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.neoforged.neoforge.capabilities.Capabilities;
+import org.jetbrains.annotations.Nullable;
 
 public class CAConnectivityHandler {
 
@@ -211,7 +210,7 @@ public class CAConnectivityHandler {
 
 					if (part instanceof ModularAccumulatorBlockEntity ienergyPart && ienergyPart.hasAccumulator()) {
 						InternalEnergyStorage storageAt = ienergyPart.getEnergy();
-						int energyAt = storageAt.getEnergyStored();
+						long energyAt = storageAt.getAmount();
 						if (energyAt > 0) {
 							// making this generic would be a rather large mess, unfortunately
 							if (be instanceof ModularAccumulatorBlockEntity ienergyBE && ienergyBE.hasAccumulator()
@@ -219,7 +218,7 @@ public class CAConnectivityHandler {
 								beEnergy.internalProduceEnergy(energyAt);
 							}
 						}
-						storageAt.internalConsumeEnergy(storageAt.getMaxEnergyStored());
+						storageAt.internalConsumeEnergy(storageAt.getCapacity());
 					}
 
 					splitMultiAndInvalidate(part, cache, false);
@@ -243,7 +242,7 @@ public class CAConnectivityHandler {
 
 	// tryReconnect helps whenever only a few tanks have been removed
 	private static <T extends BlockEntity & IMultiBlockEntityContainer> void splitMultiAndInvalidate(T be,
-		@Nullable SearchCache<T> cache, boolean tryReconnect) {
+																									 @Nullable SearchCache<T> cache, boolean tryReconnect) {
 		Level level = be.getLevel();
 		if (level == null) return;
 
@@ -259,10 +258,10 @@ public class CAConnectivityHandler {
 		Direction.Axis axis = be.getMainConnectionAxis();
 
 		// fluid handling, if present
-		int toDistribute = 0;
-		int maxCapacity = 0;
+		long toDistribute = 0;
+		long maxCapacity = 0;
 		if (be instanceof ModularAccumulatorBlockEntity ienergyBE && ienergyBE.hasAccumulator()) {
-			toDistribute = ienergyBE.getEnergy().getEnergyStored();
+			toDistribute = ienergyBE.getEnergy().getAmount();
 			maxCapacity = ienergyBE.getSize(0);
 
 			if (!be.isRemoved())
@@ -289,10 +288,10 @@ public class CAConnectivityHandler {
 					partAt.removeController(true);
 
 					if (partAt != be) {
-						int copy;
+						long copy;
 						InternalEnergyStorage tank =
 							(partAt instanceof ModularAccumulatorBlockEntity ienergyPart ? ienergyPart.getEnergy() : null);
-							int split = Math.min(maxCapacity, toDistribute);
+							long split = Math.min(maxCapacity, toDistribute);
 							copy = split;
 							toDistribute -= split;
 							if (tank != null)
@@ -312,7 +311,8 @@ public class CAConnectivityHandler {
 		}
 
 		if (be instanceof ModularAccumulatorBlockEntity ienergy && ienergy.hasAccumulator()) {
-			be.getLevel().invalidateCapabilities(be.getBlockPos());
+			if (be.getLevel() instanceof ServerWorldCache worldCache)
+				worldCache.fabric_invalidateCache(be.getBlockPos());
 		}
 
 		if (tryReconnect) formMulti(be.getType(), level, cache == null ? new SearchCache<>() : cache, frontier);

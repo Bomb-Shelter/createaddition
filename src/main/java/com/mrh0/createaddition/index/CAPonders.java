@@ -10,10 +10,9 @@ import com.simibubi.create.infrastructure.ponder.AllCreatePonderTags;
 import com.tterrag.registrate.util.entry.ItemProviderEntry;
 import net.createmod.ponder.api.registration.PonderSceneRegistrationHelper;
 import net.createmod.ponder.api.registration.PonderTagRegistrationHelper;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.resources.ResourceLocation;
 import com.tterrag.registrate.util.entry.RegistryEntry;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.data.loading.DatagenModLoader;
 
 public class CAPonders {
 	public static final ResourceLocation ELECTRIC = CreateAddition.asResource("electric");
@@ -68,7 +67,7 @@ public class CAPonders {
 		if(CreateAddition.CC_ACTIVE)
 			HELPER.addStoryBoard(CABlocks.ELECTRIC_MOTOR, "cc_electric_motor", PonderScenes::ccMotor, AllCreatePonderTags.KINETIC_SOURCES, ELECTRIC);
 
-		if(!FMLEnvironment.production && !DatagenModLoader.isRunningDataGen())
+		if(FabricLoader.getInstance().isDevelopmentEnvironment())
 			HELPER.addStoryBoard(AllItems.WRENCH,"debug/fluidtank", DebugScenes::controllerBEDebug);
 	}
 }

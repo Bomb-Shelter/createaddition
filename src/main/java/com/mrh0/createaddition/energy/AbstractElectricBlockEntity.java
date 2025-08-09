@@ -2,6 +2,8 @@ package com.mrh0.createaddition.energy;
 
 import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -9,9 +11,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.energy.IEnergyStorage;
+import team.reborn.energy.api.EnergyStorage;
 
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -22,7 +22,7 @@ public abstract class AbstractElectricBlockEntity extends SmartBlockEntity {
 	protected final InternalEnergyStorage localEnergy;
 
 	private final EnumSet<Direction> invalidSides = EnumSet.allOf(Direction.class);
-	private final EnumMap<Direction, BlockCapabilityCache<IEnergyStorage, Direction>> escacheMap = new EnumMap<>(Direction.class);
+	private final EnumMap<Direction, BlockApiCache<EnergyStorage, Direction>> escacheMap = new EnumMap<>(Direction.class);
 
 	public AbstractElectricBlockEntity(BlockEntityType<?> tileEntityTypeIn, BlockPos pos, BlockState state) {
 		super(tileEntityTypeIn, pos, state);
@@ -91,13 +91,13 @@ public abstract class AbstractElectricBlockEntity extends SmartBlockEntity {
 		le.addListener((es) -> invalidCache(side));
 		*/
 
-		var cache = BlockCapabilityCache.create(
-				Capabilities.EnergyStorage.BLOCK, // capability to cache
-				(ServerLevel) level, // level
-				getBlockPos().relative(side),
-				side.getOpposite(),
-				() -> !this.isRemoved(), // validity check (because the cache might outlive the object it belongs to)
-				() -> { invalidSides.add(side); } // invalidation listener
+		var cache = BlockApiCache.create(
+			EnergyStorage.SIDED, // capability to cache
+			(ServerLevel) level, // level
+			getBlockPos().relative(side)
+			//side.getOpposite(),
+			//() -> !this.isRemoved(), // validity check (because the cache might outlive the object it belongs to)
+			//() -> { invalidSides.add(side); } // invalidation listener
 		);
 		escacheMap.put(side, cache);
 	}

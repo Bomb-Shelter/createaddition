@@ -1,0 +1,20 @@
+{
+  "values": [
+    {
+      "id": "createaddition:flowing_seed_oil",
+      "required": false
+    },
+    {
+      "id": "createaddition:seed_oil",
+      "required": false
+    },
+    {
+      "id": "createaddition:flowing_bioethanol",
+      "required": false
+    },
+    {
+      "id": "createaddition:bioethanol",
+      "required": false
+    }
+  ]
+}

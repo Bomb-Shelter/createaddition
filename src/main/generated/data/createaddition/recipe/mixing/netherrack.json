@@ -1,0 +1,21 @@
+{
+  "type": "create:mixing",
+  "ingredients": [
+    {
+      "tag": "c:cobblestones"
+    },
+    {
+      "item": "create:cinder_flour"
+    },
+    {
+      "type": "fluid_tag",
+      "amount": 25,
+      "fluid_tag": "minecraft:lava"
+    }
+  ],
+  "results": [
+    {
+      "id": "minecraft:netherrack"
+    }
+  ]
+}

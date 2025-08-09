@@ -1,0 +1,12 @@
+{
+  "values": [
+    {
+      "id": "createaddition:chocolate_cake",
+      "required": false
+    },
+    {
+      "id": "createaddition:honey_cake",
+      "required": false
+    }
+  ]
+}

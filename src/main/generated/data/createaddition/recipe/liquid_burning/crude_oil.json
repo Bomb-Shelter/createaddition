@@ -1,0 +1,18 @@
+{
+  "type": "createaddition:liquid_burning",
+  "burn_time": 9600,
+  "ingredients": [
+    {
+      "type": "fluid_tag",
+      "amount": 1000,
+      "fluid_tag": "c:crude_oil"
+    }
+  ],
+  "porting_lib:conditions": [
+    {
+      "type": "createaddition:has_fluid_tag",
+      "fluidTag": "c:crude_oil"
+    }
+  ],
+  "results": []
+}

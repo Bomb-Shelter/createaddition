@@ -32,9 +32,9 @@ public class CAEntities {
 		String id = CreateLang.asId(name);
 		return (CreateEntityBuilder<T, ?>)
 				CreateAddition.REGISTRATE.entity(id, factory, group)
-			.properties(b -> b.setTrackingRange(range)
-				.setUpdateInterval(updateFrequency)
-				.setShouldReceiveVelocityUpdates(sendVelocity))
+			.properties(b -> b.clientTrackingRange(range)
+				.updateInterval(updateFrequency)
+				.alwaysUpdateVelocity(sendVelocity))
 			.properties(propertyBuilder)
 			.properties(b -> {
 				if (immuneToFire)

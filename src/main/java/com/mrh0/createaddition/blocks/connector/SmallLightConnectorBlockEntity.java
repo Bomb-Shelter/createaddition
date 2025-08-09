@@ -12,8 +12,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
+import team.reborn.energy.api.EnergyStorage;
 
 import java.util.List;
 
@@ -35,11 +34,10 @@ public class SmallLightConnectorBlockEntity extends AbstractConnectorBlockEntity
         posTimeOffset = 10 + (Math.abs(pos.getX()*31 + pos.getY()*45 + pos.getZ()*33) % 7) * 3;
     }
 
-    public static void registerCapabilities(RegisterCapabilitiesEvent event) {
-        event.registerBlockEntity(
-                Capabilities.EnergyStorage.BLOCK,
-                CABlockEntities.SMALL_LIGHT_CONNECTOR.get(),
-                (be, context) -> be.internal
+    public static void registerCapabilities() {
+        EnergyStorage.SIDED.registerForBlockEntity(
+            (be, context) -> be.internal,
+            CABlockEntities.SMALL_LIGHT_CONNECTOR.get()
         );
     }
 

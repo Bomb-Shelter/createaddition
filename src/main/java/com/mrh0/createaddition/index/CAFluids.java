@@ -4,12 +4,12 @@ import com.mrh0.createaddition.CreateAddition;
 import com.simibubi.create.AllFluids;
 
 import com.tterrag.registrate.util.entry.FluidEntry;
+import io.github.fabricators_of_create.porting_lib.fluids.BaseFlowingFluid;
+import io.github.fabricators_of_create.porting_lib.fluids.FluidStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.material.FluidState;
-import net.neoforged.neoforge.fluids.BaseFlowingFluid;
-import net.neoforged.neoforge.fluids.FluidStack;
 
 public class CAFluids {
 	static {

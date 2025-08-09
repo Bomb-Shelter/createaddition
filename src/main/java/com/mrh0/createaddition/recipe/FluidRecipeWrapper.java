@@ -1,11 +1,11 @@
 package com.mrh0.createaddition.recipe;
 
+import io.github.fabricators_of_create.porting_lib.fluids.FluidStack;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeInput;
-import net.neoforged.neoforge.fluids.FluidStack;
 import org.jetbrains.annotations.NotNull;
 
 public class FluidRecipeWrapper implements Container, RecipeInput {

@@ -1,0 +1,24 @@
+{
+  "values": [
+    {
+      "id": "createaddition:gold_rod",
+      "required": false
+    },
+    {
+      "id": "createaddition:iron_rod",
+      "required": false
+    },
+    {
+      "id": "createaddition:electrum_rod",
+      "required": false
+    },
+    {
+      "id": "createaddition:brass_rod",
+      "required": false
+    },
+    {
+      "id": "createaddition:copper_rod",
+      "required": false
+    }
+  ]
+}

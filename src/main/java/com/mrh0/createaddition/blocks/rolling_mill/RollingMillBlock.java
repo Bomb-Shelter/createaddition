@@ -6,7 +6,12 @@ import com.simibubi.create.content.kinetics.base.HorizontalKineticBlock;
 import com.simibubi.create.foundation.block.IBE;
 import com.simibubi.create.foundation.item.ItemHelper;
 
+import io.github.fabricators_of_create.porting_lib.transfer.TransferUtil;
+import io.github.fabricators_of_create.porting_lib.transfer.item.ItemStackHandler;
 import net.createmod.catnip.data.Iterate;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
+import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
@@ -28,9 +33,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -53,7 +55,7 @@ public class RollingMillBlock extends HorizontalKineticBlock implements IBE<Roll
 		withBlockEntityDo(level, pos, rollingMill -> {
 			boolean emptyOutput = true;
 			ItemStackHandler inv = rollingMill.outputInv;
-			for (int slot = 0; slot < inv.getSlots(); slot++) {
+			for (int slot = 0; slot < inv.getSlotCount(); slot++) {
 				ItemStack stackInSlot = inv.getStackInSlot(slot);
 				if (!stackInSlot.isEmpty())
 					emptyOutput = false;
@@ -63,7 +65,7 @@ public class RollingMillBlock extends HorizontalKineticBlock implements IBE<Roll
 
 			if (emptyOutput) {
 				inv = rollingMill.inputInv;
-				for (int slot = 0; slot < inv.getSlots(); slot++) {
+				for (int slot = 0; slot < inv.getSlotCount(); slot++) {
 					player.getInventory().placeItemBackInInventory(inv.getStackInSlot(slot));
 					inv.setStackInSlot(slot, ItemStack.EMPTY);
 				}
@@ -97,15 +99,23 @@ public class RollingMillBlock extends HorizontalKineticBlock implements IBE<Roll
 		if (rollingMill == null) return;
 
 		if (rollingMill.getLevel() == null) return;
-		var capability = rollingMill.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, rollingMill.getBlockPos(), null);
+		var capability = ItemStorage.SIDED.find(rollingMill.getLevel(), rollingMill.getBlockPos(), null);
 
 		if (capability == null) return;
 
-		ItemStack remainder = capability.insertItem(0, itemEntity.getItem(), false);
-		if (remainder.isEmpty())
-			itemEntity.remove(RemovalReason.KILLED);
-		if (remainder.getCount() < itemEntity.getItem().getCount())
-			itemEntity.setItem(remainder);
+		try (Transaction transaction = TransferUtil.getTransaction()) {
+			ItemStack stack = itemEntity.getItem().copy();
+			long inserted = capability.insert(ItemVariant.of(stack), stack.getCount(), transaction);
+
+			if (inserted >= stack.getCount())
+				itemEntity.remove(RemovalReason.KILLED);
+
+			if (inserted > 0) {
+				itemEntity.getItem().setCount(stack.getCount() - (int) inserted);
+			}
+
+			transaction.commit();
+		}
 	}
 
 	@Override

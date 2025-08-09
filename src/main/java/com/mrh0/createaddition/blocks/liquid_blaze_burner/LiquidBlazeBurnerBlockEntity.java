@@ -12,6 +12,7 @@ import com.mrh0.createaddition.network.ObservePacketPayload;
 import com.mrh0.createaddition.network.TimeRemainingPacketPayload;
 import com.mrh0.createaddition.recipe.FluidRecipeWrapper;
 import com.mrh0.createaddition.recipe.liquid_burning.LiquidBurningRecipe;
+import com.mrh0.createaddition.util.FabricTransferUtil;
 import com.mrh0.createaddition.util.Util;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllItems;
@@ -23,9 +24,20 @@ import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 import com.simibubi.create.foundation.fluid.SmartFluidTank;
 
+import io.github.fabricators_of_create.porting_lib.fluids.FluidStack;
+import io.github.fabricators_of_create.porting_lib.transfer.TransferUtil;
+import io.github.fabricators_of_create.porting_lib.transfer.fluid.FluidTank;
 import net.createmod.catnip.animation.LerpedFloat;
 import net.createmod.catnip.math.AngleHelper;
 import net.createmod.catnip.math.VecHelper;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.registry.FuelRegistry;
+import net.fabricmc.fabric.api.transfer.v1.context.ContainerItemContext;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidStorage;
+import net.fabricmc.fabric.api.transfer.v1.fluid.FluidVariant;
+import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -47,13 +59,6 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
-import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 import org.jetbrains.annotations.Nullable;
 
 import static com.simibubi.create.content.processing.burner.BlazeBurnerBlock.HEAT_LEVEL;
@@ -102,11 +107,10 @@ public class LiquidBlazeBurnerBlockEntity extends SmartBlockEntity implements IH
 	private Optional<RecipeHolder<LiquidBurningRecipe>> recipeCache = Optional.empty();
 	private Fluid lastFluid = null;
 
-	public static void registerCapability(RegisterCapabilitiesEvent event) {
-		event.registerBlockEntity(
-				Capabilities.FluidHandler.BLOCK,
-				CABlockEntities.LIQUID_BLAZE_BURNER.get(),
-				(be, direction) -> be.tankInventory
+	public static void registerCapability() {
+		FluidStorage.SIDED.registerForBlockEntity(
+			(be, direction) -> be.tankInventory,
+			CABlockEntities.LIQUID_BLAZE_BURNER.get()
 		);
 	}
 
@@ -158,7 +162,12 @@ public class LiquidBlazeBurnerBlockEntity extends SmartBlockEntity implements IH
 		catch(Exception e) {
 			return;
 		}
-		tankInventory.drain(100, IFluidHandler.FluidAction.EXECUTE);
+		try (Transaction transaction = TransferUtil.getTransaction()) {
+			if (!tankInventory.getResource().isBlank()) {
+				tankInventory.extract(tankInventory.getResource(), 100 * 81, transaction);
+			}
+			transaction.commit();
+		}
 
 		BlazeBurnerBlock.HeatLevel prev = heatLevel;
 		playSound();
@@ -218,7 +227,7 @@ public class LiquidBlazeBurnerBlockEntity extends SmartBlockEntity implements IH
 		super.lazyTick();
 	}
 
-	@OnlyIn(Dist.CLIENT)
+	@Environment(EnvType.CLIENT)
     void tickAnimation() {
 		var serverHeatLevel = getHeatLevelForRender();
 		boolean active = serverHeatLevel.isAtLeast(BlazeBurnerBlock.HeatLevel.FADING) && isValidBlockAbove();
@@ -294,19 +303,24 @@ public class LiquidBlazeBurnerBlockEntity extends SmartBlockEntity implements IH
 
 	private boolean tryUpdateLiquid(ItemStack itemStack, boolean simulate) {
 		if (level == null) return false;
-		var itemHandler = itemStack.getCapability(Capabilities.FluidHandler.ITEM);
+		var itemHandler = FluidStorage.ITEM.find(itemStack, ContainerItemContext.withConstant(itemStack));
 
 		if (itemHandler == null) return false;
-		if (itemHandler.getFluidInTank(0).isEmpty()) return false;
-		FluidStack stack = itemHandler.getFluidInTank(0);
-		Optional<RecipeHolder<LiquidBurningRecipe>> recipe = find(stack, level);
+		StorageView<FluidVariant> itemView = FabricTransferUtil.getFirstInStorage(itemHandler);
+		if (itemView == null || itemView.isResourceBlank() || itemView.getAmount() <= 0 || itemView.getResource().isBlank()) return false;
+		Optional<RecipeHolder<LiquidBurningRecipe>> recipe = find(new FluidStack(itemView), level);
 		if (recipe.isEmpty()) return false;
 
-		var beHandler = level.getCapability(Capabilities.FluidHandler.BLOCK, getBlockPos(), null);
+		var beHandler = FluidStorage.SIDED.find(level, getBlockPos(), null);
 		if (beHandler == null) return false;
-		if (beHandler.getTankCapacity(0) - beHandler.getFluidInTank(0).getAmount() < 1000) return false;
 
-		if (!simulate) beHandler.fill(new FluidStack(itemHandler.getFluidInTank(0).getFluid(), 1000), IFluidHandler.FluidAction.EXECUTE);
+		StorageView<FluidVariant> beView = FabricTransferUtil.getFirstInStorage(itemHandler);
+		if (beView == null || beView.getCapacity() - beView.getAmount() < 1000 * 81) return false;
+		if (!simulate)
+			try (Transaction transaction = TransferUtil.getTransaction()) {
+				beHandler.insert(itemView.getResource(), 1000 * 81, transaction);
+				transaction.commit();
+			}
 		//if (!player.isCreative())
 		//	player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BUCKET, 1));
 		if (!simulate) level.playSound(null, getBlockPos(), SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, .125f + level.random.nextFloat() * .125f, .75f - level.random.nextFloat() * .25f);
@@ -326,7 +340,12 @@ public class LiquidBlazeBurnerBlockEntity extends SmartBlockEntity implements IH
 			newBurnTime = 1000;
 			newFuel = FuelType.SPECIAL;
 		} else {
-			newBurnTime = itemStack.getBurnTime(null);
+			Integer burnTime = FuelRegistry.INSTANCE.get(itemStack.getItem());
+
+			if (burnTime != null)
+				newBurnTime = burnTime;
+			else
+				newBurnTime = 0;
 			if (newBurnTime > 0)
 				newFuel = FuelType.NORMAL;
 			else if (AllItemTags.BLAZE_BURNER_FUEL_REGULAR.matches(itemStack)) {
@@ -469,7 +488,7 @@ public class LiquidBlazeBurnerBlockEntity extends SmartBlockEntity implements IH
 	public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
 		if (level == null) return false;
 		ObservePacketPayload.send(worldPosition, 0);
-		containedFluidTooltip(tooltip, isPlayerSneaking, level.getCapability(Capabilities.FluidHandler.BLOCK, getBlockPos(), null));
+		containedFluidTooltip(tooltip, isPlayerSneaking, FluidStorage.SIDED.find(level, getBlockPos(), null));
 		if (TimeRemainingPacketPayload.clientTimeRemaining > 20) CALang.builder().add(Component.literal(" ").append(Component.translatable(CreateAddition.MODID + ".tooltip.liquid_burning.time_remaining").withStyle(ChatFormatting.GRAY))
 				.append(Component.literal(" " + Util.formatTime(TimeRemainingPacketPayload.clientTimeRemaining)).withStyle(ChatFormatting.AQUA))).forGoggles(tooltip);
 		return true;

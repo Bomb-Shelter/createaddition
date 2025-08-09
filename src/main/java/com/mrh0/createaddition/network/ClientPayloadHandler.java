@@ -1,6 +1,6 @@
 package com.mrh0.createaddition.network;
 
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import com.mrh0.createaddition.network.fabric.IPayloadContext;
 
 public class ClientPayloadHandler {
     public static void handleObservePayload(final ObservePacketPayload pkt, final IPayloadContext ctx) {

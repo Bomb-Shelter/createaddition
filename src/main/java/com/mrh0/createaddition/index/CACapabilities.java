@@ -13,24 +13,23 @@ import com.mrh0.createaddition.blocks.portable_energy_interface.PortableEnergyIn
 import com.mrh0.createaddition.blocks.rolling_mill.RollingMillBlockEntity;
 import com.mrh0.createaddition.blocks.tesla_coil.TeslaCoilBlockEntity;
 import com.mrh0.createaddition.compat.computercraft.Peripherals;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 
 public class CACapabilities {
-    public static void register(RegisterCapabilitiesEvent event) {
-        AlternatorBlockEntity.registerCapabilities(event);
-        LargeConnectorBlockEntity.registerCapabilities(event);
-        SmallConnectorBlockEntity.registerCapabilities(event);
-        SmallLightConnectorBlockEntity.registerCapabilities(event);
-        ElectricMotorBlockEntity.registerCapabilities(event);
-        CreativeEnergyBlockEntity.registerCapabilities(event);
-        ModularAccumulatorBlockEntity.registerCapabilities(event);
-        PortableEnergyInterfaceBlockEntity.registerCapabilities(event);
-        TeslaCoilBlockEntity.registerCapabilities(event);
-        RollingMillBlockEntity.registerCapabilities(event);
-        LiquidBlazeBurnerBlockEntity.registerCapability(event);
+    public static void register() {
+        AlternatorBlockEntity.registerCapabilities();
+        LargeConnectorBlockEntity.registerCapabilities();
+        SmallConnectorBlockEntity.registerCapabilities();
+        SmallLightConnectorBlockEntity.registerCapabilities();
+        ElectricMotorBlockEntity.registerCapabilities();
+        CreativeEnergyBlockEntity.registerCapabilities();
+        ModularAccumulatorBlockEntity.registerCapabilities();
+        PortableEnergyInterfaceBlockEntity.registerCapabilities();
+        TeslaCoilBlockEntity.registerCapabilities();
+        RollingMillBlockEntity.registerCapabilities();
+        LiquidBlazeBurnerBlockEntity.registerCapability();
 
         if(CreateAddition.CC_ACTIVE) {
-            Peripherals.registerPeripheralCapabilities(event);
+            Peripherals.registerPeripheralCapabilities();
         }
     }
 }

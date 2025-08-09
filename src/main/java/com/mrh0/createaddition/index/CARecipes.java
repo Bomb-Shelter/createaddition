@@ -8,15 +8,14 @@ import com.mrh0.createaddition.recipe.conditions.HasFluidTagCondition;
 import com.mrh0.createaddition.recipe.liquid_burning.LiquidBurningRecipe;
 import com.mrh0.createaddition.recipe.rolling.RollingRecipe;
 import com.simibubi.create.content.processing.recipe.StandardProcessingRecipe;
+import io.github.fabricators_of_create.porting_lib.registry.DeferredHolder;
+import io.github.fabricators_of_create.porting_lib.registry.DeferredRegister;
+import io.github.fabricators_of_create.porting_lib.resources.conditions.ICondition;
+import io.github.fabricators_of_create.porting_lib.resources.conditions.PortingLibConditions;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.common.conditions.ICondition;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 import java.util.function.Supplier;
 
@@ -24,7 +23,7 @@ public class CARecipes {
 	public static final DeferredRegister<RecipeSerializer<?>> SERIALIZERS =
             DeferredRegister.create(BuiltInRegistries.RECIPE_SERIALIZER, CreateAddition.MODID);
 	public static final DeferredRegister<RecipeType<?>> RECIPE_TYPES = DeferredRegister.create(BuiltInRegistries.RECIPE_TYPE, CreateAddition.MODID);
-	public static final DeferredRegister<MapCodec<? extends ICondition>> CONDITION_CODECS = DeferredRegister.create(NeoForgeRegistries.CONDITION_SERIALIZERS, CreateAddition.MODID);
+	public static final DeferredRegister<MapCodec<? extends ICondition>> CONDITION_CODECS = DeferredRegister.create(PortingLibConditions.CONDITION_SERIALIZERS, CreateAddition.MODID);
 
 	private static <T extends Recipe<?>> Supplier<RecipeType<T>> registerRecipeType(String id) {
 		return RECIPE_TYPES.register(id, () -> new RecipeType<T>() {
@@ -45,10 +44,10 @@ public class CARecipes {
 	public static final Supplier<MapCodec<HasFluidTagCondition>> HAS_FLUID_TAG_CONDITION =
 			CONDITION_CODECS.register("has_fluid_tag", () -> HasFluidTagCondition.CODEC);
 
-    public static void register(IEventBus event) {
-    	SERIALIZERS.register(event);
-		RECIPE_TYPES.register(event);
+    public static void register() {
+    	SERIALIZERS.register();
+		RECIPE_TYPES.register();
 
-		CONDITION_CODECS.register(event);
+		CONDITION_CODECS.register();
     }
 }

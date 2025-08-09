@@ -27,15 +27,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.energy.IEnergyStorage;
+import team.reborn.energy.api.EnergyStorage;
 
 public class ElectricMotorBlockEntity extends GeneratingKineticBlockEntity {
 	protected float motorSpeed;
 	protected ScrollValueBehaviour generatedSpeed;
 	protected final InternalEnergyStorage energy;
-	private final IEnergyStorage capability;
+	private final EnergyStorage capability;
 	//private LazyOptional<ElectricMotorPeripheral> lazyPeripheral = null;
 
 	private boolean cc_update_rpm = false;
@@ -55,11 +53,10 @@ public class ElectricMotorBlockEntity extends GeneratingKineticBlockEntity {
 		setLazyTickRate(20);
 	}
 
-	public static void registerCapabilities(RegisterCapabilitiesEvent event) {
-		event.registerBlockEntity(
-				Capabilities.EnergyStorage.BLOCK,
-				CABlockEntities.ELECTRIC_MOTOR.get(),
-				(be, context) -> be.capability
+	public static void registerCapabilities() {
+		EnergyStorage.SIDED.registerForBlockEntity(
+			(be, context) -> be.capability,
+			CABlockEntities.ELECTRIC_MOTOR.get()
 		);
 	}
 
@@ -179,15 +176,15 @@ public class ElectricMotorBlockEntity extends GeneratingKineticBlockEntity {
 
 		//Old Lazy
 		if(level.isClientSide()) return;
-		int con = getEnergyConsumptionRate(motorSpeed);
+		long con = getEnergyConsumptionRate(motorSpeed);
 		if(!active) {
-			if(energy.getEnergyStored() > con * 2 && !getBlockState().getValue(ElectricMotorBlock.POWERED)) {
+			if(energy.getAmount() > con * 2 && !getBlockState().getValue(ElectricMotorBlock.POWERED)) {
 				active = true;
 				updateGeneratedRotation();
 			}
 		}
 		else {
-			int ext = energy.internalConsumeEnergy(con);
+			long ext = energy.internalConsumeEnergy(con);
 			if(ext < con || getBlockState().getValue(ElectricMotorBlock.POWERED)) {
 				active = false;
 				updateGeneratedRotation();

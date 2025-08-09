@@ -12,6 +12,9 @@ import com.simibubi.create.content.trains.schedule.condition.CargoThresholdCondi
 import com.simibubi.create.foundation.gui.ModularGuiLineBuilder;
 import com.simibubi.create.foundation.utility.CreateLang;
 
+import io.github.fabricators_of_create.porting_lib.transfer.TransferUtil;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -19,9 +22,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.energy.IEnergyStorage;
+import team.reborn.energy.api.EnergyStorage;
 
 public class EnergyThresholdCondition extends CargoThresholdCondition {
     @Override
@@ -53,16 +54,16 @@ public class EnergyThresholdCondition extends CargoThresholdCondition {
         Ops operator = getOperator();
         int target = getThreshold();
 
-        int foundEnergy = 0;
+        long foundEnergy = 0;
         for (Carriage carriage : train.carriages) {
             if(carriage.anyAvailableEntity() == null) continue;
-            IEnergyStorage ies = PortableEnergyManager.get(carriage.anyAvailableEntity().getContraption());
+            EnergyStorage ies = PortableEnergyManager.get(carriage.anyAvailableEntity().getContraption());
             if(ies == null) continue;
-            foundEnergy += ies.getEnergyStored();
+            foundEnergy += ies.getAmount();
         }
 
-        requestStatusToUpdate(foundEnergy / 1000, context);
-        return operator.test(foundEnergy, target * 1000);
+        requestStatusToUpdate(TransferUtil.truncateLong(foundEnergy / 1000), context);
+        return operator.test(TransferUtil.truncateLong(foundEnergy), target * 1000);
     }
 
     @Override
@@ -83,7 +84,7 @@ public class EnergyThresholdCondition extends CargoThresholdCondition {
 
     // This needs to be redone OnlyIn is never recommended
     @Override
-    @OnlyIn(Dist.CLIENT)
+    @Environment(EnvType.CLIENT)
     public void initConfigurationWidgets(ModularGuiLineBuilder builder) {
         super.initConfigurationWidgets(builder);
         builder.addSelectionScrollInput(71, 50, (i, l) -> {

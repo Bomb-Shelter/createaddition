@@ -11,54 +11,65 @@ import com.simibubi.create.AllBlocks;
 
 import com.simibubi.create.content.processing.burner.BlazeBurnerBlock;
 import com.simibubi.create.content.processing.burner.BlazeBurnerBlockEntity;
+import io.github.fabricators_of_create.porting_lib.entity.events.player.PlayerInteractEvent;
+import io.github.fabricators_of_create.porting_lib.level.events.LevelEvent;
+import net.createmod.catnip.platform.CatnipServices;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.event.level.LevelEvent;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
-@EventBusSubscriber
 public class GameEvents {
-	@SubscribeEvent
-	public static void levelTickEvent(LevelTickEvent.Pre evt) {
-		if(evt.getLevel().isClientSide()) return;
-		// if (evt == Phase.END) return;
-		EnergyNetworkManager.tickWorld(evt.getLevel());
+	public static void init() {
+		ServerTickEvents.START_WORLD_TICK.register(GameEvents::levelTickEvent);
+		ServerTickEvents.START_SERVER_TICK.register(server -> serverTickEvent());
+
+		CatnipServices.PLATFORM.executeOnClientOnly(() -> GameEvents::initClient);
+
+		LevelEvent.Load.EVENT.register(GameEvents::loadEvent);
+		LevelEvent.Unload.EVENT.register(GameEvents::LevelUnload);
+		PlayerInteractEvent.RightClickBlock.EVENT.register(GameEvents::interact);
 	}
 
-	@SubscribeEvent
-	public static void serverTickEvent(ServerTickEvent.Pre evt) {
+	public static void initClient() {
+		ClientTickEvents.END_CLIENT_TICK.register(GameEvents::clientTickEvent);
+	}
+
+	public static void levelTickEvent(ServerLevel level) {
+		//if(evt.getLevel().isClientSide()) return;
+		// if (evt == Phase.END) return;
+		EnergyNetworkManager.tickWorld(level);
+	}
+
+	public static void serverTickEvent() {
 		//if (evt.phase == Phase.END) return;
 		// Using ServerTick instead of WorldTick because some contraptions can switch worlds.
 		PortableEnergyManager.tick();
 	}
 
-	@SubscribeEvent
-	public static void clientTickEvent(ClientTickEvent.Post evt) {
+	@Environment(EnvType.CLIENT)
+	public static void clientTickEvent(Minecraft minecraft) {
 		//if (evt.phase == Phase.START) return;
 		ObservePacketPayload.tick();
 		CADebugger.tick();
 	}
 
-	@SubscribeEvent
 	public static void loadEvent(LevelEvent.Load evt) {
 		if(evt.getLevel().isClientSide()) return;
 		new EnergyNetworkManager(evt.getLevel());
 	}
 
-	@SubscribeEvent
 	public static void LevelUnload(LevelEvent.Unload event) {
 		if (!event.getLevel().isClientSide()) {
 			EnergyNetworkManager.instances.remove(event.getLevel());
 		}
 	}
 
-	@SubscribeEvent
     public static void interact(PlayerInteractEvent.RightClickBlock evt) {
 		try {
 			if(evt.getLevel().isClientSide()) return;

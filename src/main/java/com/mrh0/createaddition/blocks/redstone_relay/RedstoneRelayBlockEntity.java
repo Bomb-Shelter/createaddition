@@ -47,8 +47,8 @@ public class RedstoneRelayBlockEntity extends SmartBlockEntity implements IWireN
 	private final IWireNode[] nodeCache;
 	private EnergyNetwork networkIn;
 	private EnergyNetwork networkOut;
-	private int demand = 0;
-	private int throughput = 0;
+	private long demand = 0;
+	private long throughput = 0;
 
 	private boolean wasContraption = false;
 	private boolean firstTick = true;
@@ -316,7 +316,7 @@ public class RedstoneRelayBlockEntity extends SmartBlockEntity implements IWireN
 		}
 	}
 
-	public int getThroughput() {
+	public long getThroughput() {
 		return throughput;
 	}
 
@@ -365,7 +365,7 @@ public class RedstoneRelayBlockEntity extends SmartBlockEntity implements IWireN
 		return ConnectorType.Small;
 	}
 
-	public int getDemand() {
+	public long getDemand() {
 		return demand;
 	}
 

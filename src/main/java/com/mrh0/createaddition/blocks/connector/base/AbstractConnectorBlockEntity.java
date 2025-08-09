@@ -17,6 +17,11 @@ import com.mrh0.createaddition.network.ObservePacketPayload;
 
 import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
 import com.simibubi.create.foundation.blockEntity.SmartBlockEntity;
+import io.github.fabricators_of_create.porting_lib.transfer.TransferUtil;
+import io.github.fabricators_of_create.porting_lib.transfer.callbacks.TransactionSuccessCallback;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
+import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -31,10 +36,8 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.energy.IEnergyStorage;
 import org.jetbrains.annotations.Nullable;
+import team.reborn.energy.api.EnergyStorage;
 
 public abstract class AbstractConnectorBlockEntity extends SmartBlockEntity implements IWireNode, IObserveBlockEntity, IHaveGoggleInformation, IDebugDrawer, IEnergyProvider {
 
@@ -48,7 +51,7 @@ public abstract class AbstractConnectorBlockEntity extends SmartBlockEntity impl
 	private boolean firstTick = true;
 
 	public InterfaceEnergyHandler internal = new InterfaceEnergyHandler();
-	protected BlockCapabilityCache<IEnergyStorage, Direction> external;
+	protected BlockApiCache<EnergyStorage, Direction> external;
 
 	public AbstractConnectorBlockEntity(BlockEntityType<?> blockEntityTypeIn, BlockPos pos, BlockState state) {
 		super(blockEntityTypeIn, pos, state);
@@ -59,7 +62,7 @@ public abstract class AbstractConnectorBlockEntity extends SmartBlockEntity impl
 
 	@Nullable
 	@Override
-	public IEnergyStorage getEnergyStorage(@Nullable Direction direction) {
+	public EnergyStorage getEnergyStorage(@Nullable Direction direction) {
 		if(isEnergyInput(direction) || isEnergyOutput(direction)) return internal;
 		return null;
 	}
@@ -70,45 +73,49 @@ public abstract class AbstractConnectorBlockEntity extends SmartBlockEntity impl
 		return Math.min(getMaxIn(), getMaxOut());
 	}
 
-	private class InterfaceEnergyHandler implements IEnergyStorage {
+	private class InterfaceEnergyHandler implements EnergyStorage {
 		public InterfaceEnergyHandler() {}
 
 		@Override
-		public int receiveEnergy(int maxReceive, boolean simulate) {
+		public long insert(long maxReceive, TransactionContext transaction) {
 			if(!CommonConfig.CONNECTOR_ALLOW_PASSIVE_IO.get()) return 0;
 			if(getMode() != ConnectorMode.Pull) return 0;
 			if (network == null) return 0;
 			maxReceive = Math.min(maxReceive, getMaxIn());
-			return network.push(maxReceive, simulate);
+			long finalMaxReceive = maxReceive;
+			TransactionSuccessCallback.onSuccess(transaction, () -> network.push(finalMaxReceive, false));
+			return network.push(maxReceive, true);
 		}
 
 		@Override
-		public int extractEnergy(int maxExtract, boolean simulate) {
+		public long extract(long maxExtract, TransactionContext transaction) {
 			if(!CommonConfig.CONNECTOR_ALLOW_PASSIVE_IO.get()) return 0;
 			if(getMode() != ConnectorMode.Push) return 0;
 			if (network == null) return 0;
 			maxExtract = Math.min(maxExtract, getMaxOut());
-			return network.pull(maxExtract, simulate);
+			long finalMaxExtract = maxExtract;
+			TransactionSuccessCallback.onSuccess(transaction, () -> network.pull(finalMaxExtract, false));
+			return network.pull(maxExtract, true);
 		}
 
 		@Override
-		public int getEnergyStored() {
+		public long getAmount() {
 			if (network == null) return 0;
 			return Math.min(getCapacity(), network.getBuff());
 		}
 
 		@Override
-		public int getMaxEnergyStored() {
-			return getCapacity();
+		public long getCapacity() {
+			return AbstractConnectorBlockEntity.this.getCapacity();
 		}
 
 		@Override
-		public boolean canExtract() {
+		public boolean supportsExtraction() {
 			return true;
 		}
 
 		@Override
-		public boolean canReceive() {
+		public boolean supportsInsertion() {
 			return true;
 		}
 	}
@@ -283,17 +290,28 @@ public abstract class AbstractConnectorBlockEntity extends SmartBlockEntity impl
 		ConnectorMode mode = getMode();
 		if(level == null) return;
 		if(level.isClientSide()) return;
-		IEnergyStorage otherStorage = external.getCapability();
+		EnergyStorage otherStorage = external.find(getBlockState().getValue(AbstractConnectorBlock.FACING));
 		if (otherStorage == null) return;
 
 		if (mode == ConnectorMode.Push) {
-			int pulled = network.pull(network.demand(otherStorage.receiveEnergy(getMaxOut(), true)));
-			otherStorage.receiveEnergy(pulled, false);
+			try (Transaction transaction = TransferUtil.getTransaction()) {
+				long pulled;
+
+				try (Transaction tx = Transaction.openNested(transaction)) {
+					pulled = network.pull(network.demand(otherStorage.insert(getMaxOut(), tx)));
+				}
+
+				otherStorage.insert(pulled, transaction);
+				transaction.commit();
+			}
 		}
 
 		if (mode == ConnectorMode.Pull) {
-			int toPush = otherStorage.extractEnergy(network.push(getMaxIn(), true), false);
-			network.push(toPush);
+			try (Transaction transaction = TransferUtil.getTransaction()) {
+				long toPush = otherStorage.extract(network.push(getMaxIn(), true), transaction);
+				transaction.commit();
+				network.push(toPush);
+			}
 		}
 	}
 
@@ -388,13 +406,13 @@ public abstract class AbstractConnectorBlockEntity extends SmartBlockEntity impl
 		//external = le;
 		//le.addListener((es) -> { externalStorageInvalid = true; });
 
-		external = BlockCapabilityCache.create(
-			Capabilities.EnergyStorage.BLOCK, // capability to cache
+		external = BlockApiCache.create(
+			EnergyStorage.SIDED, // capability to cache
 			(ServerLevel) level, // level
-			getPos().relative(side),
-			side.getOpposite(),
-			() -> !this.isRemoved(), // validity check (because the cache might outlive the object it belongs to)
-			() -> externalStorageInvalid = true // invalidation listener
+			getPos().relative(side)
+			//side.getOpposite(),
+			//() -> !this.isRemoved(), // validity check (because the cache might outlive the object it belongs to)
+			//() -> externalStorageInvalid = true // invalidation listener
 		);
 	}
 
@@ -424,7 +442,7 @@ public abstract class AbstractConnectorBlockEntity extends SmartBlockEntity impl
 		// Outline connected power
 		BlockPos pos = worldPosition.relative(getBlockState().getValue(AbstractConnectorBlock.FACING));
 
-		var cap = level.getCapability(Capabilities.EnergyStorage.BLOCK, pos, getBlockState().getValue(AbstractConnectorBlock.FACING).getOpposite());
+		var cap = EnergyStorage.SIDED.find(level, pos, getBlockState().getValue(AbstractConnectorBlock.FACING).getOpposite());
 		//if(ignoreCapSide() && !cap.isPresent()) cap = te.getCapability(ForgeCapabilities.ENERGY);
 
 		if (cap == null) return;

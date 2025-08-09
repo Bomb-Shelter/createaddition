@@ -3,10 +3,12 @@ package com.mrh0.createaddition.blocks.portable_energy_interface;
 import com.mrh0.createaddition.config.CommonConfig;
 import com.simibubi.create.content.contraptions.Contraption;
 import com.simibubi.create.content.contraptions.behaviour.MovementContext;
+import io.github.fabricators_of_create.porting_lib.transfer.callbacks.TransactionSuccessCallback;
+import net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.neoforged.neoforge.energy.IEnergyStorage;
 import org.jetbrains.annotations.Nullable;
+import team.reborn.energy.api.EnergyStorage;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -44,12 +46,12 @@ public class PortableEnergyManager {
 		holder.removed = true;
 	}
 
-	public static @Nullable IEnergyStorage get(Contraption contraption) {
+	public static @Nullable EnergyStorage get(Contraption contraption) {
 		if (contraption.entity == null) return null;
 		return CONTRAPTIONS.get(contraption.entity.getUUID());
 	}
 
-	public static class EnergyStorageHolder implements IEnergyStorage {
+	public static class EnergyStorageHolder implements EnergyStorage {
 
 		private int energy = 0;
 		private int capacity = 0;
@@ -79,58 +81,58 @@ public class PortableEnergyManager {
 		}
 
 		@Override
-		public int receiveEnergy(int maxReceive, boolean simulate) {
-			if (!this.canReceive()) return 0;
-			int energyReceived = Math.min(this.capacity - this.energy, Math.min(this.maxReceive, maxReceive));
-			if (!simulate) {
+		public long insert(long maxReceive, TransactionContext transaction) {
+			if (!this.supportsInsertion()) return 0;
+			long energyReceived = Math.min(this.capacity - this.energy, Math.min(this.maxReceive, maxReceive));
+			TransactionSuccessCallback.onSuccess(transaction, () -> {
 				this.energy += energyReceived;
 				// Store NBT
-				int energyLeft = energyReceived;
+				long energyLeft = energyReceived;
 				for (EnergyData data : energyHolders.values()) {
 					energyLeft -= data.receiveEnergy(energyLeft);
 					if (energyLeft <= 0) break; // It shouldn't be possible to go below 0, but just in case.
 				}
 				// In case we didn't store all the energy.
 				if (energyLeft > 0) throw new IllegalStateException("Failed to store energy.");
-			}
+			});
 			return energyReceived;
 		}
 
 		@Override
-		public int extractEnergy(int maxExtract, boolean simulate) {
-			if (!this.canExtract()) return 0;
-			int energyExtracted = Math.min(this.energy, Math.min(this.maxExtract, maxExtract));
-			if (!simulate) {
+		public long extract(long maxReceive, TransactionContext transaction) {
+			if (!this.supportsExtraction()) return 0;
+			long energyExtracted = Math.min(this.energy, Math.min(this.maxExtract, maxExtract));
+			TransactionSuccessCallback.onSuccess(transaction, () -> {
 				this.energy -= energyExtracted;
 				// Store NBT
-				int energyLeft = energyExtracted;
+				long energyLeft = energyExtracted;
 				for (EnergyData data : energyHolders.values()) {
 					energyLeft -= data.extractEnergy(energyLeft);
 					if (energyLeft <= 0) break; // It shouldn't be possible to go below 0, but just in case.
 				}
 				// In case we didn't store all the energy.
 				if (energyLeft > 0) throw new IllegalStateException("Failed to store energy.");
-			}
+			});
 			return energyExtracted;
 		}
 
 		@Override
-		public int getEnergyStored() {
+		public long getAmount() {
 			return this.energy;
 		}
 
 		@Override
-		public int getMaxEnergyStored() {
+		public long getCapacity() {
 			return this.capacity;
 		}
 
 		@Override
-		public boolean canExtract() {
+		public boolean supportsExtraction() {
 			return !this.removed;
 		}
 
 		@Override
-		public boolean canReceive() {
+		public boolean supportsInsertion() {
 			return !this.removed;
 		}
 	}
@@ -138,37 +140,37 @@ public class PortableEnergyManager {
 	public static class EnergyData {
 
 		private final CompoundTag nbt;
-		private final int capacity;
-		private int energy;
+		private final long capacity;
+		private long energy;
 
 		public EnergyData(CompoundTag nbt) {
 			CompoundTag energyContent = (CompoundTag)nbt.get("EnergyContent");
 			if (energyContent == null) throw new IllegalArgumentException("EnergyContent is null");
 			this.nbt = nbt;
-			this.capacity = nbt.getInt("EnergyCapacity");
-			this.energy = energyContent.getInt("energy");
+			this.capacity = nbt.getLong("EnergyCapacity");
+			this.energy = energyContent.getLong("energy");
 		}
 
-		public int receiveEnergy(int energy) {
-			int energyReceived = Math.min(this.capacity - this.energy, energy);
+		public long receiveEnergy(long energy) {
+			long energyReceived = Math.min(this.capacity - this.energy, energy);
 			if (energyReceived == 0) return 0; // No need to save if nothing changed.
 			this.energy += energyReceived;
 
 			// Save
 			CompoundTag energyContent = (CompoundTag)nbt.get("EnergyContent");
-			energyContent.putInt("energy", this.energy);
+			energyContent.putLong("energy", this.energy);
 
 			return energyReceived;
 		}
 
-		public int extractEnergy(int energy) {
-			int energyRemoved = Math.min(this.energy, energy);
+		public long extractEnergy(long energy) {
+			long energyRemoved = Math.min(this.energy, energy);
 			if (energyRemoved == 0) return 0; // No need to save if nothing changed.
 			this.energy -= energyRemoved;
 
 			// Save
 			CompoundTag energyContent = (CompoundTag)nbt.get("EnergyContent");
-			energyContent.putInt("energy", this.energy);
+			energyContent.putLong("energy", this.energy);
 
 			return energyRemoved;
 		}

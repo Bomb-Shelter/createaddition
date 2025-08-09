@@ -8,7 +8,7 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.common.DataMapHooks;
+import net.minecraft.world.level.block.WeatheringCopper;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -39,7 +39,7 @@ public class ChargingRecipeGen extends ProcessingRecipeGen<ChargingRecipeParams,
     }
 
     public GeneratedRecipe deoxidize(Block block) {
-        Optional<Block> deoxidizedBlock = Optional.ofNullable(DataMapHooks.getPreviousOxidizedStage(block));
+        Optional<Block> deoxidizedBlock = WeatheringCopper.getPrevious(block);
         if (deoxidizedBlock.isEmpty()) throw new IllegalStateException("Cannot de-oxidize " + block);
         return deoxidize(block, deoxidizedBlock.get());
     }

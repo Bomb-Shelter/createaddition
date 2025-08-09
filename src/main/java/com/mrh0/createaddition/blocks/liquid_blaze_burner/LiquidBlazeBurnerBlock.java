@@ -2,8 +2,6 @@ package com.mrh0.createaddition.blocks.liquid_blaze_burner;
 
 import java.util.Random;
 
-import javax.annotation.Nullable;
-
 import com.mojang.serialization.MapCodec;
 import com.mrh0.createaddition.index.CABlockEntities;
 import com.simibubi.create.AllBlocks;
@@ -14,6 +12,9 @@ import com.simibubi.create.content.processing.basin.BasinBlockEntity;
 import com.simibubi.create.content.processing.burner.BlazeBurnerBlock;
 import com.simibubi.create.foundation.block.IBE;
 
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.entity.FakePlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -37,9 +38,7 @@ import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.common.util.FakePlayer;
+import org.jetbrains.annotations.Nullable;
 
 import static com.simibubi.create.content.processing.burner.BlazeBurnerBlock.HEAT_LEVEL;
 
@@ -160,7 +159,7 @@ public class LiquidBlazeBurnerBlock extends HorizontalDirectionalBlock implement
 		if (!burnerTE.tryUpdateFuel(stack, forceOverflow, simulate)) return InteractionResultHolder.fail(ItemStack.EMPTY);
 
 		if (!doNotConsume) {
-			ItemStack container = stack.hasCraftingRemainingItem() ? stack.getCraftingRemainingItem() : ItemStack.EMPTY;
+			ItemStack container = stack.getRecipeRemainder() != null ? stack.getRecipeRemainder() : ItemStack.EMPTY;
 			if (!level.isClientSide) {stack.shrink(1);
 			}
 			return InteractionResultHolder.success(container);
@@ -196,7 +195,7 @@ public class LiquidBlazeBurnerBlock extends HorizontalDirectionalBlock implement
 		return false;
 	}
 
-	@OnlyIn(Dist.CLIENT)
+	@Environment(EnvType.CLIENT)
 	public void animateTick(BlockState state, Level world, BlockPos pos, Random random) {
 		if (random.nextInt(10) != 0) return;
 		if (!state.getValue(HEAT_LEVEL).isAtLeast(BlazeBurnerBlock.HeatLevel.SMOULDERING)) return;

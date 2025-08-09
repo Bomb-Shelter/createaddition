@@ -18,6 +18,12 @@ import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
 import com.simibubi.create.foundation.item.TooltipHelper;
 import com.simibubi.create.foundation.utility.CreateLang;
 
+import io.github.fabricators_of_create.porting_lib.transfer.TransferUtil;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiCache;
+import net.fabricmc.fabric.api.lookup.v1.block.BlockApiLookup;
+import net.fabricmc.fabric.api.transfer.v1.transaction.Transaction;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -29,22 +35,16 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
-import net.neoforged.neoforge.energy.IEnergyStorage;
-
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
+import team.reborn.energy.api.EnergyStorage;
 
 public class AlternatorBlockEntity extends KineticBlockEntity implements IEnergyProvider {
 
 	protected final InternalEnergyStorage energy;
-	private final IEnergyStorage capability;
+	private final EnergyStorage capability;
 
 	private final EnumSet<Direction> invalidSides = EnumSet.allOf(Direction.class);
-	private final EnumMap<Direction, BlockCapabilityCache<IEnergyStorage, Direction>> cache = new EnumMap<>(Direction.class);
+	private final EnumMap<Direction, BlockApiCache<EnergyStorage, Direction>> cache = new EnumMap<>(Direction.class);
 
 	public AlternatorBlockEntity(BlockEntityType<?> typeIn, BlockPos pos, BlockState state) {
 		super(typeIn, pos, state);
@@ -52,11 +52,10 @@ public class AlternatorBlockEntity extends KineticBlockEntity implements IEnergy
 		capability = energy;
 	}
 
-	public static void registerCapabilities(RegisterCapabilitiesEvent event) {
-		event.registerBlockEntity(
-				Capabilities.EnergyStorage.BLOCK,
-				CABlockEntities.ALTERNATOR.get(),
-				(be, context) -> be.capability
+	public static void registerCapabilities() {
+		EnergyStorage.SIDED.registerForBlockEntity(
+			(be, context) -> be.capability,
+			CABlockEntities.ALTERNATOR.get()
 		);
 	}
 
@@ -111,14 +110,21 @@ public class AlternatorBlockEntity extends KineticBlockEntity implements IEnergy
 
 		for (Direction d : Direction.values()) {
 			if(!isEnergyOutput(d)) continue;
-			IEnergyStorage ies = cache.get(d).getCapability();
+			EnergyStorage ies = cache.get(d).find(d);
 			if(ies == null) continue;
-			int ext = energy.extractEnergy(ies.receiveEnergy(CommonConfig.ALTERNATOR_MAX_OUTPUT.get(), true), false);
-			ies.receiveEnergy(ext, false);
+			try (Transaction transaction = TransferUtil.getTransaction()) {
+				long toInsert;
+				try (Transaction tx = Transaction.openNested(transaction)) {
+					toInsert = ies.insert(CommonConfig.ALTERNATOR_MAX_OUTPUT.get(), tx);
+				}
+
+				long ext = energy.extract(toInsert, transaction);
+				ies.insert(ext, transaction);
+			}
 		}
 	}
 
-	@OnlyIn(Dist.CLIENT)
+	@Environment(EnvType.CLIENT)
 	@Override
 	public void tickAudio() {
 		super.tickAudio();
@@ -149,19 +155,19 @@ public class AlternatorBlockEntity extends KineticBlockEntity implements IEnergy
 		if (level == null) return;
 		if (level.isClientSide()) return;
 		for (Direction side : Direction.values()) {
-			cache.put(side, BlockCapabilityCache.create(
-					Capabilities.EnergyStorage.BLOCK,
+			cache.put(side, BlockApiCache.create(
+					EnergyStorage.SIDED,
 					(ServerLevel) level,
-					getBlockPos().relative(side),
-					side.getOpposite(),
-					() -> !this.isRemoved(),
-					() -> invalidSides.add(side)
+					getBlockPos().relative(side)
+					//side.getOpposite(),
+					//() -> !this.isRemoved(),
+					//() -> invalidSides.add(side)
 			));
 		}
 	}
 
 	@Override
-	public IEnergyStorage getEnergyStorage(@Nullable Direction direction) {
+	public EnergyStorage getEnergyStorage(@Nullable Direction direction) {
 		return energy;
 	}
 }

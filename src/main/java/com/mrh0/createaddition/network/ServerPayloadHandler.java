@@ -1,10 +1,10 @@
 package com.mrh0.createaddition.network;
 
+import com.mrh0.createaddition.network.fabric.IPayloadContext;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public class ServerPayloadHandler {
     public static void handleObservePayload(final ObservePacketPayload pkt, final IPayloadContext ctx) {

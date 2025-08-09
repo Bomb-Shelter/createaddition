@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "E": {
+      "tag": "c:ingots/electrum"
+    },
+    "G": {
+      "tag": "c:gems/emerald"
+    },
+    "W": {
+      "tag": "c:wires/electrum"
+    }
+  },
+  "pattern": [
+    " WW",
+    "EEW",
+    "GE "
+  ],
+  "result": {
+    "count": 1,
+    "id": "createaddition:electrum_amulet"
+  }
+}

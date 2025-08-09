@@ -5,6 +5,7 @@ import com.mrh0.createaddition.recipe.charging.ChargingRecipe;
 import com.mrh0.createaddition.recipe.charging.ChargingRecipeParams;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -15,7 +16,7 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.common.DataMapHooks;
+import net.minecraft.world.level.block.WeatheringCopper;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -53,12 +54,12 @@ public class ChargingRecipeBuilder extends CARecipeBuilder {
     }
 
     public static ChargingRecipeBuilder charging(ItemStack item, ResourceKey<Enchantment> enchantmentKey, HolderLookup.Provider provider) {
-        item.enchant(provider.holderOrThrow(enchantmentKey),1);
+        item.enchant(provider.lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(enchantmentKey),1);
         return charging(item);
     }
 
     public static ChargingRecipeBuilder deoxidize(Block block) {
-        Optional<Block> deoxidizedBlock = Optional.ofNullable(DataMapHooks.getPreviousOxidizedStage(block));
+        Optional<Block> deoxidizedBlock = WeatheringCopper.getPrevious(block);
         if (deoxidizedBlock.isEmpty()) CreateAddition.LOGGER.error("Cannot de-oxidize {}", block);
         return charging(deoxidizedBlock.get()).require(Ingredient.of(block)).energy(4000).maxChargeRate(200);
     }
