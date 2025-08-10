@@ -20,11 +20,11 @@ public class CAFillingRecipeGen extends FillingRecipeGen {
 
     GeneratedRecipe
     CAKE = create(ResourceLocation.fromNamespaceAndPath(CreateAddition.MODID, "cake"), b -> b.require(CAItems.CAKE_BASE_BAKED)
-            .require(Tags.Fluids.MILK,1000)
+            .require(Tags.Fluids.MILK,1000 * 81)
             .output(Items.CAKE)
     ),
     CHOCOLATE_CAKE = create(CABlocks.CHOCOLATE_CAKE.getId(), b -> b.require(CAItems.CAKE_BASE_BAKED)
-            .require(AllFluids.CHOCOLATE.getSource(), 500)
+            .require(AllFluids.CHOCOLATE.getSource(), 500 * 81)
             .output(CABlocks.CHOCOLATE_CAKE.asItem())
     ),
     HONEY_CAKE = create(CABlocks.HONEY_CAKE.getId(), b -> b.require(CAItems.CAKE_BASE_BAKED)

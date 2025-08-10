@@ -23,7 +23,7 @@ public class CACompactingRecipeGen extends CompactingRecipeGen {
     BaseRecipeProvider.GeneratedRecipe
 
     BIOMASS_PELLET = create(CAItems.BIOMASS_PELLET.getId(), b -> b.require(CAItems.BIOMASS)
-            .output(Fluids.WATER,50)
+            .output(Fluids.WATER,50 * 81)
             .output(CAItems.BIOMASS_PELLET)
     ),
     CAKE_BASE = create(CAItems.CAKE_BASE.getId(), b -> b.require(Tags.Items.EGGS)
@@ -33,7 +33,7 @@ public class CACompactingRecipeGen extends CompactingRecipeGen {
             .output(CAItems.CAKE_BASE)
     ),
     SEED_OIL = create(ResourceLocation.fromNamespaceAndPath(CreateAddition.MODID,"seed_oil"), b -> b.require(Tags.Items.SEEDS)
-            .output( CAFluids.SEED_OIL.getSource().getSource(), 100)
+            .output( CAFluids.SEED_OIL.getSource().getSource(), 100 * 81)
     )
     ;
 }

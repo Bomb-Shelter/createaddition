@@ -30,7 +30,7 @@ public class CAMixingRecipeGen extends MixingRecipeGen {
 
     private GeneratedRecipe makeBiomassRecipe(String recipeName, ItemLike itemLike, int amount) {
         return create(ResourceLocation.fromNamespaceAndPath(CreateAddition.MODID, recipeName), b -> {
-            b.require(CATagRegister.Fluids.PLANTOIL,100)
+            b.require(CATagRegister.Fluids.PLANTOIL,100 * 81)
                     .output(CAItems.BIOMASS)
                     .requiresHeat(HeatCondition.HEATED);
             for(int i=0;i<amount;i++) b.require(itemLike);
@@ -40,7 +40,7 @@ public class CAMixingRecipeGen extends MixingRecipeGen {
 
     private GeneratedRecipe makeBiomassRecipe(String recipeName, TagKey<Item> tag, int amount) {
         return create(ResourceLocation.fromNamespaceAndPath(CreateAddition.MODID, recipeName), b -> {
-            b.require(CATagRegister.Fluids.PLANTOIL, 100)
+            b.require(CATagRegister.Fluids.PLANTOIL, 100 * 81)
                     .output(CAItems.BIOMASS)
                     .requiresHeat(HeatCondition.HEATED);
             for(int i=0;i<amount;i++) b.require(tag);
@@ -54,7 +54,7 @@ public class CAMixingRecipeGen extends MixingRecipeGen {
             .require(AllItems.CINDER_FLOUR)
             .require(CAItems.BIOMASS)
             .require(CAItems.BIOMASS)
-            .output(CAFluids.BIOETHANOL.getSource().getSource(),125)
+            .output(CAFluids.BIOETHANOL.getSource().getSource(),125 * 81)
     ),
     BIOMASS_FROM_CROPS = makeBiomassRecipe("biomass_from_crops", Tags.Items.CROPS, 2),
     BIOMASS_FROM_FLOWERS = makeBiomassRecipe("biomass_from_flowers", ItemTags.FLOWERS, 2),
@@ -75,7 +75,7 @@ public class CAMixingRecipeGen extends MixingRecipeGen {
     NETHERRACK = create(ResourceLocation.fromNamespaceAndPath(CreateAddition.MODID,"netherrack"), b -> b
             .require(Tags.Items.COBBLESTONES)
             .require(AllItems.CINDER_FLOUR)
-            .require(FluidTags.LAVA, 25)
+            .require(FluidTags.LAVA, 25 * 81)
             .output(Items.NETHERRACK)
     )
 
