@@ -136,6 +136,7 @@ public class CreateAddition implements ModInitializer {
     private void doClientStuff() {
     	// event.enqueueWork(CAPonder::register);
         CAItemProperties.register();
+        CAFluids.registerClient();
 
         PonderIndex.addPlugin(new CAPonderPlugin());
 

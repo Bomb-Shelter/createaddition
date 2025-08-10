@@ -84,8 +84,6 @@ public class CAFluids {
 			.properties(p -> p.stacksTo(1))
 			.register();
 		BIOETHANOL = bioethanol.register();
-
-		registerClient();
 	}
 
 	public static void registerClient() {
