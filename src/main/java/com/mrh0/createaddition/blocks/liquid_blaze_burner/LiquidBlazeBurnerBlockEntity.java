@@ -115,7 +115,7 @@ public class LiquidBlazeBurnerBlockEntity extends SmartBlockEntity implements IH
 	}
 
 	protected SmartFluidTank createInventory() {
-		return new SmartFluidTank(4000, this::onFluidStackChanged);
+		return new SmartFluidTank(4000 * 81, this::onFluidStackChanged);
 	}
 
 	protected void onFluidStackChanged(FluidStack newFluidStack) {
